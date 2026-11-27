@@ -41,6 +41,7 @@
       <button class="nav-tab active" data-tab="overview" onclick="switchTab('overview')">🏆 Přehled & Top</button>
       <button class="nav-tab" data-tab="roster" onclick="switchTab('roster')">👥 Seznam hráčů</button>
       <button class="nav-tab" data-tab="objectives" onclick="switchTab('objectives')">🎯 Objectives</button>
+      <button class="nav-tab" data-tab="pants" onclick="switchTab('pants')">👖 Pants</button>
       <button class="nav-tab" data-tab="announcements" onclick="switchTab('announcements')">📢 Oznámení</button>
       <button class="nav-tab" data-tab="history" onclick="switchTab('history')">📜 Historie týdnů</button>
       <button class="nav-tab" data-tab="admin" data-admin-only onclick="switchTab('admin')">🛠️ Správa (Admin)</button>
@@ -114,7 +115,106 @@
       <div class="objectives-detail-grid" id="objectivesDetailGrid"></div>
     </section>
 
-    <!-- ZÁLOŽKA 4: OZNÁMENÍ -->
+    <!-- ZÁLOŽKA 4: PANTS (OTEVÍRÁNÍ BEDEN & ENCHANTOVÁNÍ T1–T3) -->
+    <section id="tab-pants" class="tab-content">
+      <div id="pantsAuthGate" class="admin-card pants-lock-card" style="display: none;">
+        <div class="pants-lock-icon">🔒</div>
+        <h3>Sekce Pants je pouze pro přihlášené hráče</h3>
+        <p class="muted-text" style="margin-bottom: 14px;">
+          Pro otevírání beden a enchantování pantů na Tier 3 se nejprve přihlas svým účtem.
+        </p>
+        <button type="button" class="btn btn-green" onclick="openAuthModal()">🔐 Přihlásit se</button>
+      </div>
+
+      <div id="pantsAuthenticatedContent">
+        <div class="hero-header">
+          <h1>MYSTIC PANTS • SIMULÁTOR BEDEN</h1>
+          <p>Vyber tier bedny (Tier 8, Tier 9 nebo Tier 10), zkus štěstí na drop pantů a enchantuj až na Tier 3</p>
+        </div>
+
+        <div class="pants-layout">
+          <!-- LEVÝ PANEL: VÝBĚR BEDNY A OTEVÍRÁNÍ -->
+          <div class="admin-card" style="margin-bottom: 0;">
+            <h3>🎁 1. Výběr bedny (Tier 8 – Tier 10)</h3>
+
+            <div class="field" style="margin-bottom: 12px;">
+              <label for="pantsChestTier">Vyber bednu, na které chceš zkusit štěstí</label>
+              <select id="pantsChestTier" class="styled-select">
+                <option value="8">Tier 8 Bedna</option>
+                <option value="9">Tier 9 Bedna</option>
+                <option value="10" selected>Tier 10 Bedna</option>
+              </select>
+            </div>
+
+            <div class="admin-actions" style="margin-bottom: 14px;">
+              <button type="button" class="btn btn-gold" onclick="openPantsCrate()">🎁 Vyzvednout bednu</button>
+              <button type="button" class="btn btn-dark" onclick="resetCurrentPants()">🔄 Nový pokus / Reset</button>
+            </div>
+
+            <div id="pantsCrateStatus" class="pants-status-box">
+              Vyber <strong>Tier 8</strong>, <strong>Tier 9</strong> nebo <strong>Tier 10</strong> bednu a klikni na <strong>🎁 Vyzvednout bednu</strong>.
+            </div>
+
+            <div class="pants-stats-row" id="pantsStatsRow"></div>
+          </div>
+
+          <!-- PRAVÝ PANEL: AKTIVNÍ PANTY A ENCHANTOVÁNÍ T1 -> T2 -> T3 -->
+          <div class="admin-card" style="margin-bottom: 0;">
+            <h3>✨ 2. Enchantování pantů (Tier 1 → Tier 2 → Tier 3)</h3>
+            <div id="activePantsWorkbench"></div>
+          </div>
+        </div>
+
+        <!-- PŘIDÁVÁNÍ ENCHANTŮ POUZE PRO ADMINA -->
+        <div class="admin-card" id="adminEnchantCreatorCard" style="margin-top: 18px; display: none;">
+          <h3>🛠️ Přidat nový enchant (Pouze Admin)</h3>
+          <div class="admin-grid">
+            <div class="field">
+              <label for="newEnchantName">Název enchantu</label>
+              <input type="text" id="newEnchantName" placeholder="Např. Golden Heart" />
+            </div>
+            <div class="field">
+              <label for="newEnchantRarity">Rarity (barva)</label>
+              <select id="newEnchantRarity" class="styled-select">
+                <option value="common">Common (Šedá • 60 %)</option>
+                <option value="rare">Rare (Modrá • 30 %)</option>
+                <option value="epic">Epic (Fialová • 10 %)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="newEnchantDesc">Popis / vysvětlení</label>
+              <input type="text" id="newEnchantDesc" placeholder="Popis účinku enchantu..." />
+            </div>
+          </div>
+          <div class="admin-actions" style="margin-top: 6px;">
+            <button type="button" class="btn btn-green" onclick="addCustomEnchant()">➕ Přidat enchant</button>
+            <button type="button" class="btn btn-dark" onclick="resetEnchantsToDefault()">♻️ Obnovit výchozí enchanty</button>
+          </div>
+        </div>
+
+        <!-- SEZNAM ENCHANTŮ A RARIT -->
+        <div class="admin-card" style="margin-top: 18px;">
+          <h3>📜 Přehled možných enchantů (Tier pantů 1 → 2 → 3, tier enchantu náhodný I–III)</h3>
+          <p class="muted-text" style="margin-bottom: 12px;">
+            <strong>Common (Šedá)</strong> • <strong>Rare (Modrá)</strong> • <strong>Epic (Fialová)</strong>.
+            U každého enchantu může padnout libovolný tier (<strong>I</strong>, <strong>II</strong> nebo <strong>III</strong>).
+            Enchanty <strong>Really Alive</strong> a <strong>Excess</strong> nemohou padnout společně na jedněch pantech.
+          </p>
+          <div class="objectives-detail-grid" id="enchantCatalogGrid" style="margin-bottom: 0;"></div>
+        </div>
+
+        <!-- ULOŽENÉ TIER 3 PANTY -->
+        <div class="admin-card" style="margin-top: 18px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+            <h3 style="margin-bottom: 0;">🏆 Tvoje dokončené Tier 3 Panty</h3>
+            <button type="button" class="btn btn-dark" onclick="clearSavedPants()">🗑️ Vymazat sbírku</button>
+          </div>
+          <div class="roster-grid" id="savedPantsGrid"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ZÁLOŽKA 5: OZNÁMENÍ -->
     <section id="tab-announcements" class="tab-content">
       <div class="hero-header">
         <h1>OZNÁMENÍ & PLÁN AKCÍ</h1>
@@ -153,7 +253,7 @@
       <div id="announcementsList"></div>
     </section>
 
-    <!-- ZÁLOŽKA 5: HISTORIE TÝDNŮ -->
+    <!-- ZÁLOŽKA 6: HISTORIE TÝDNŮ -->
     <section id="tab-history" class="tab-content">
       <div class="hero-header">
         <h1>HISTORIE TÝDNŮ</h1>
@@ -162,7 +262,7 @@
       <div id="historyList"></div>
     </section>
 
-    <!-- ZÁLOŽKA 6: SPRÁVA (POUZE PRO ADMINA) -->
+    <!-- ZÁLOŽKA 7: SPRÁVA (POUZE PRO ADMINA) -->
     <section id="tab-admin" class="tab-content" data-admin-only>
       <div class="hero-header">
         <h1>SPRÁVA GUILDY LAP</h1>
