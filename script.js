@@ -25,14 +25,13 @@ const ACCOUNTS = [
 ];
 
 const PANTS_COLORS = [
-  { id: "red", name: "Red Pants", swatchClass: "swatch-red", cardClass: "color-red" },
-  { id: "green", name: "Green Pants", swatchClass: "swatch-green", cardClass: "color-green" },
-  { id: "blue", name: "Blue Pants", swatchClass: "swatch-blue", cardClass: "color-blue" },
-  { id: "yellow", name: "Yellow Pants", swatchClass: "swatch-yellow", cardClass: "color-yellow" }
+  { id: "red", name: "Red", swatchClass: "swatch-red", cardClass: "color-red" },
+  { id: "green", name: "Green", swatchClass: "swatch-green", cardClass: "color-green" },
+  { id: "blue", name: "Blue", swatchClass: "swatch-blue", cardClass: "color-blue" },
+  { id: "yellow", name: "Yellow", swatchClass: "swatch-yellow", cardClass: "color-yellow" }
 ];
 
 const DEFAULT_ENCHANT_CATALOG = [
-  // Common (šedá)
   { id: "enc_prot", name: "Protection", rarity: "common" },
   { id: "enc_billy", name: "Billy", rarity: "common" },
   { id: "enc_dia_allergy", name: "Diamond Allergy", rarity: "common" },
@@ -40,7 +39,6 @@ const DEFAULT_ENCHANT_CATALOG = [
   { id: "enc_pebble", name: "Pebble", rarity: "common" },
   { id: "enc_life_saver", name: "Life Saver", rarity: "common" },
 
-  // Rare (modrá)
   { id: "enc_solitude", name: "Solitude", rarity: "rare" },
   { id: "enc_booboo", name: "Boo-Boo", rarity: "rare" },
   { id: "enc_counter", name: "Counter-Offensive", rarity: "rare" },
@@ -49,7 +47,6 @@ const DEFAULT_ENCHANT_CATALOG = [
   { id: "enc_coverage", name: "Coverage", rarity: "rare" },
   { id: "enc_speedrunner", name: "Speedrunner", rarity: "rare" },
 
-  // Epic (fialová)
   { id: "enc_not_glad", name: "\"Not\"Gladiator", rarity: "epic" },
   { id: "enc_excess", name: "Excess", rarity: "epic" },
   { id: "enc_antivirus", name: "Antivirus", rarity: "epic" },
@@ -459,7 +456,6 @@ function switchTab(tab) {
     const btn = document.querySelector('.nav-tab[data-tab="pants"]');
     if (btn) btn.classList.add("active");
     openAuthModal();
-    showToast("Pro vstup do sekce Pants se musíš přihlásit.");
     return;
   }
 
@@ -483,7 +479,6 @@ function pickRandomPantsColor() {
 function openPantsCrate() {
   if (!isLoggedIn()) {
     openAuthModal();
-    showToast("Nejprve se přihlas.");
     return;
   }
 
@@ -503,21 +498,19 @@ function openPantsCrate() {
       colorId: droppedColor.id,
       tier: 0,
       enchants: [],
-      fromChest: `Tier ${chestTier} Bedna`
+      fromChest: `T${chestTier}`
     };
-    const msg = `Gratuluju získal si ${droppedColor.name}`;
+    const msg = `${droppedColor.name} • T0`;
     if (statusEl) {
       statusEl.className = "pants-status-box hit";
-      statusEl.innerHTML = `🎉 <strong>${msg}!</strong> Teď je můžeš enchantovat přes Tier 1 → Tier 2 → Tier 3.`;
+      statusEl.innerHTML = `<strong>${msg}</strong>`;
     }
-    showToast(`🎉 ${msg}!`);
   } else {
     const missMsg = "Nevadi, zkus to priste";
     if (statusEl) {
       statusEl.className = "pants-status-box miss";
-      statusEl.innerHTML = `❌ <strong>${missMsg}</strong>`;
+      statusEl.innerHTML = `<strong>${missMsg}</strong>`;
     }
-    showToast(missMsg);
   }
 
   renderPantsTab();
@@ -532,7 +525,7 @@ function resetCurrentPants() {
   const statusEl = document.getElementById("pantsCrateStatus");
   if (statusEl) {
     statusEl.className = "pants-status-box";
-    statusEl.innerHTML = `Vyber <strong>Tier 8</strong>, <strong>Tier 9</strong> nebo <strong>Tier 10</strong> bednu a klikni na <strong>🎁 Vyzvednout bednu</strong>.`;
+    statusEl.textContent = "Tier 8–10";
   }
   renderPantsTab();
 }
@@ -609,10 +602,7 @@ function enchantCurrentPantsStep() {
 
   const nextPantsTier = p.tier + 1;
   const rolled = rollNextEnchant(p.enchants);
-  if (!rolled) {
-    showToast("V katalogu nejsou dostupné žádné enchanty.");
-    return;
-  }
+  if (!rolled) return;
 
   p.tier = nextPantsTier;
   p.enchants.push(rolled);
@@ -624,9 +614,6 @@ function enchantCurrentPantsStep() {
       createdAt: formatNowCzech()
     });
     saveSavedPants();
-    showToast(`✨ Dokončeny Tier 3 ${getColorObj(p.colorId).name}!`);
-  } else {
-    showToast(`✨ Enchantnuto na Tier ${p.tier} (${rolled.name} ${ROMAN_TIERS[rolled.level]})`);
   }
 
   renderPantsTab();
@@ -636,11 +623,7 @@ function addCustomEnchant() {
   if (!isAdmin()) return;
   const name = document.getElementById("newEnchantName").value.trim();
   const rarity = document.getElementById("newEnchantRarity").value;
-
-  if (!name) {
-    showToast("Vyplň název enchantu.");
-    return;
-  }
+  if (!name) return;
 
   data.enchantCatalog.push({
     id: `enc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -650,14 +633,12 @@ function addCustomEnchant() {
 
   document.getElementById("newEnchantName").value = "";
   saveData();
-  showToast(`Enchant "${name}" přidán.`);
 }
 
 function removeCustomEnchant(encId) {
   if (!isAdmin()) return;
   data.enchantCatalog = data.enchantCatalog.filter(e => e.id !== encId);
   saveData();
-  showToast("Enchant odebrán.");
 }
 
 function resetEnchantsToDefault() {
@@ -665,14 +646,12 @@ function resetEnchantsToDefault() {
   if (!confirm("Obnovit výchozí seznam enchantů?")) return;
   data.enchantCatalog = structuredClone(DEFAULT_ENCHANT_CATALOG);
   saveData();
-  showToast("Výchozí enchanty obnoveny.");
 }
 
 function clearSavedPants() {
   if (!isLoggedIn()) return;
   pantsState.savedPants = [];
   saveSavedPants();
-  showToast("Sbírka Tier 3 pantů vymazána.");
   renderPantsTab();
 }
 
@@ -683,9 +662,9 @@ function renderPantsTab() {
   const statsRow = document.getElementById("pantsStatsRow");
   if (statsRow) {
     statsRow.innerHTML = `
-      <span>Otevřené bedny: <strong>${pantsState.cratesOpened}</strong></span>
-      <span>Padlé panty: <strong>${pantsState.pantsDroppedCount}</strong></span>
-      <span>Dokončené T3: <strong>${pantsState.savedPants.length}</strong></span>
+      <span>Bedny: <strong>${pantsState.cratesOpened}</strong></span>
+      <span>Drop: <strong>${pantsState.pantsDroppedCount}</strong></span>
+      <span>T3: <strong>${pantsState.savedPants.length}</strong></span>
     `;
   }
 
@@ -693,31 +672,21 @@ function renderPantsTab() {
   if (workbench) {
     const p = pantsState.currentPants;
     if (!p) {
-      workbench.innerHTML = `
-        <div class="pants-item-card">
-          <div class="player-name">Čeká na drop pantů z bedny</div>
-          <p class="muted-text" style="margin-top:6px;">
-            Jakmile ti z bedny padnou náhodné panty (<strong>Red</strong>, <strong>Green</strong>, <strong>Blue</strong> nebo <strong>Yellow</strong>), můžeš je zde postupně enchantovat přes <strong>Tier 1 → Tier 2 → Tier 3</strong>. U každého enchantu může padnout libovolný tier (<strong>I</strong>, <strong>II</strong> nebo <strong>III</strong>).
-          </p>
-        </div>
-      `;
+      workbench.innerHTML = `<div class="pants-item-card"><div class="player-name">—</div></div>`;
     } else {
       const col = getColorObj(p.colorId);
-      const tierLabel = p.tier === 0 ? "Čisté panty (Tier 0)" : `Tier ${p.tier} Panty`;
-      const enchantsHtml = p.enchants.length
-        ? p.enchants.map(e => `
-            <div class="enchant-line border-${e.rarity}">
-              <div class="enchant-line-top">
-                <strong class="enchant-name-${e.rarity}">${e.name} ${ROMAN_TIERS[e.level]}</strong>
-                <span class="rarity-pill rarity-${e.rarity}">${e.rarity}</span>
-              </div>
-            </div>
-          `).join("")
-        : `<p class="muted-text" style="margin-top:10px;">Zatím žádné enchanty. Klikni pro enchantnutí na <strong>Tier 1</strong>.</p>`;
+      const enchantsHtml = p.enchants.map(e => `
+        <div class="enchant-line border-${e.rarity}">
+          <div class="enchant-line-top">
+            <strong class="enchant-name-${e.rarity}">${e.name} ${ROMAN_TIERS[e.level]}</strong>
+            <span class="rarity-pill rarity-${e.rarity}">${e.rarity}</span>
+          </div>
+        </div>
+      `).join("");
 
       const actionBtnHtml = p.tier < 3
-        ? `<button type="button" class="btn btn-green" onclick="enchantCurrentPantsStep()">✨ Enchantnout na Tier ${p.tier + 1}</button>`
-        : `<div class="completion-box" style="margin-top:12px; margin-bottom:0;"><span>Stav itemu</span><strong>✅ HOTOVO • TIER 3 PANTY</strong></div>`;
+        ? `<button type="button" class="btn btn-green" onclick="enchantCurrentPantsStep()">✨ Tier ${p.tier + 1}</button>`
+        : `<div class="completion-box" style="margin-top:12px; margin-bottom:0;"><span>Tier 3</span><strong>✅</strong></div>`;
 
       workbench.innerHTML = `
         <div class="pants-item-card ${col.cardClass}">
@@ -725,9 +694,9 @@ function renderPantsTab() {
             <div>
               <span class="pants-swatch ${col.swatchClass}" style="vertical-align:middle; margin-right:6px;"></span>
               <strong style="font-size:1.05rem;">${col.name}</strong>
-              <span class="player-sub">• ${tierLabel}</span>
+              <span class="player-sub">• T${p.tier}</span>
             </div>
-            <span class="obj-badge">${p.fromChest || "Bedna"}</span>
+            <span class="obj-badge">${p.fromChest || ""}</span>
           </div>
           ${enchantsHtml}
           <div class="admin-actions">
@@ -742,21 +711,20 @@ function renderPantsTab() {
   if (catalogGrid) {
     const catalog = data.enchantCatalog || [];
     const byRarity = [
-      { key: "common", title: "⚪ Common Enchanty (Šedá)", items: catalog.filter(e => e.rarity === "common") },
-      { key: "rare", title: "🔵 Rare Enchanty (Modrá)", items: catalog.filter(e => e.rarity === "rare") },
-      { key: "epic", title: "🟣 Epic Enchanty (Fialová)", items: catalog.filter(e => e.rarity === "epic") }
+      { key: "common", title: "Common", items: catalog.filter(e => e.rarity === "common") },
+      { key: "rare", title: "Rare", items: catalog.filter(e => e.rarity === "rare") },
+      { key: "epic", title: "Epic", items: catalog.filter(e => e.rarity === "epic") }
     ];
 
     catalogGrid.innerHTML = byRarity.map(group => `
       <div class="pants-item-card">
         <h3 style="margin-bottom:8px;">${group.title}</h3>
-        ${group.items.length === 0 ? `<p class="muted-text">Žádné enchanty v této kategorii.</p>` : ""}
         ${group.items.map(it => `
           <div class="enchant-line border-${it.rarity}">
             <div class="enchant-line-top">
               <strong class="enchant-name-${it.rarity}">${it.name}</strong>
               <div style="display:flex; align-items:center; gap:6px;">
-                <span class="muted-text" style="font-size:0.76rem;">Tier I–III</span>
+                <span class="muted-text" style="font-size:0.76rem;">I–III</span>
                 ${isAdmin() ? `<button type="button" class="btn btn-red" style="padding:2px 7px; font-size:0.72rem;" onclick="removeCustomEnchant('${it.id}')">✕</button>` : ""}
               </div>
             </div>
@@ -769,7 +737,7 @@ function renderPantsTab() {
   const savedGrid = document.getElementById("savedPantsGrid");
   if (savedGrid) {
     if (pantsState.savedPants.length === 0) {
-      savedGrid.innerHTML = `<p class="muted-text">Zatím nemáš dokončené žádné Tier 3 panty.</p>`;
+      savedGrid.innerHTML = `<p class="muted-text">—</p>`;
     } else {
       savedGrid.innerHTML = pantsState.savedPants.map(item => {
         const col = getColorObj(item.colorId);
@@ -778,9 +746,9 @@ function renderPantsTab() {
             <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;">
               <div>
                 <span class="pants-swatch ${col.swatchClass}" style="vertical-align:middle; margin-right:6px;"></span>
-                <strong>${col.name} • Tier 3</strong>
+                <strong>${col.name} • T3</strong>
               </div>
-              <span class="obj-badge reward">${item.owner || "Hráč"}</span>
+              <span class="obj-badge reward">${item.owner || ""}</span>
             </div>
             <div class="player-sub" style="margin-top:0; margin-bottom:8px;">${item.createdAt || ""}</div>
             ${item.enchants.map(e => `
@@ -806,8 +774,8 @@ function renderTierGoalInputs() {
   for (let t = 0; t <= 10; t++) {
     html += `
       <div class="field">
-        <label for="tierGoal_${t}">Cíl T${t} (nepovinné)</label>
-        <input type="number" min="1" id="tierGoal_${t}" placeholder="Bez hodnoty" />
+        <label for="tierGoal_${t}">Cíl T${t}</label>
+        <input type="number" min="1" id="tierGoal_${t}" placeholder="—" />
       </div>
     `;
   }
@@ -1510,18 +1478,18 @@ function renderAdmin() {
                 <input type="number" min="0" value="${info.doneValue}" onchange="setObjectiveDoneValue('${obj.id}', this.value)" />
               </label>
               <label>
-                Z kolika:
+                Cíl (T${info.activeTier}):
                 <input type="number" min="1" value="${info.tierGoal ?? ""}" placeholder="—" onchange="updateObjectiveTier('${obj.id}', ${info.activeTier}, this.value)" />
               </label>
               <button type="button" class="btn ${info.rewardCompleted ? "btn-gold" : "btn-dark"}" onclick="toggleObjectiveRewardCompleted('${obj.id}')">
                 ${info.rewardCompleted ? "🎁 Bedna splněna (zrušit)" : "🎁 Reward bedna splněna"}
               </button>
-              ${isCustomDone ? `<button class="btn btn-dark" onclick="resetObjectiveDoneAuto('${obj.id}')">Auto součet hráčů</button>` : ""}
-              <button class="btn btn-red" onclick="removeObjective('${obj.id}')">Smazat</button>
+              ${isCustomDone ? `<button type="button" class="btn btn-dark" onclick="resetObjectiveDoneAuto('${obj.id}')">Auto součet hráčů</button>` : ""}
+              <button type="button" class="btn btn-red" onclick="removeObjective('${obj.id}')">Smazat</button>
             </div>
           </div>
           <div class="admin-inputs" style="border-top:1px solid var(--border); padding-top:8px;">
-            <span class="player-sub" style="margin-right:4px;">Cíle všech tierů T0–T10 (prázdné = bez hodnoty):</span>
+            <span class="player-sub" style="margin-right:4px;">Cíle T0–T10:</span>
             ${tierEditors}
           </div>
         </div>
@@ -1678,7 +1646,10 @@ function updateObjectiveTier(objId, tierIndex, val) {
   const idx = Math.min(10, Math.max(0, Number(tierIndex) || 0));
   const parsedGoal = parseOptionalTierGoal(val);
   const obj = data.objectives.find(o => o.id === objId);
-  if (obj && Array.isArray(obj.tiers)) {
+  if (obj) {
+    if (!Array.isArray(obj.tiers) || obj.tiers.length !== 11) {
+      obj.tiers = [...EMPTY_TIERS_T0_TO_T10];
+    }
     obj.tiers[idx] = parsedGoal;
     saveData();
     showToast(parsedGoal
