@@ -941,29 +941,6 @@ function renderPantsTab() {
 }
 
 /* OBJECTIVES & RYSKA S % SPLNĚNÍ */
-function renderTierGoalInputs() {
-  const grid = document.getElementById("tierGoalsGrid");
-  if (!grid || grid.children.length > 0) return;
-  let html = "";
-  for (let t = 0; t <= 10; t++) {
-    html += `
-      <div class="field">
-        <label for="tierGoal_${t}">Cíl T${t} (nepovinné)</label>
-        <input type="number" min="1" id="tierGoal_${t}" placeholder="Bez hodnoty" />
-      </div>
-    `;
-  }
-  grid.innerHTML = html;
-}
-
-function clearTierInputs() {
-  for (let t = 0; t <= 10; t++) {
-    const el = document.getElementById(`tierGoal_${t}`);
-    if (el) el.value = "";
-  }
-  showToast("Pole T0–T10 vyčištěna.");
-}
-
 function getPlayerContrib(player, objId) {
   return Math.max(0, Number(player.contrib?.[objId]) || 0);
 }
@@ -1089,6 +1066,7 @@ function renderSortSelect() {
   const select = document.getElementById("sortSelect");
   const currentVal = select.value;
   select.innerHTML = `
+    <option value="share">Největší % podíl</option>
     <option value="total">Největší přínos celkem</option>
     <option value="prestige">Podle Prestige (nejvyšší)</option>
     <option value="deaths">Nejvíce Smrtí</option>
@@ -1478,10 +1456,15 @@ function renderRoster() {
       if (sortBy === "prestige") return (b.prestige || 0) - (a.prestige || 0);
       if (sortBy === "deaths") return (b.deaths || 0) - (a.deaths || 0);
       if (sortBy === "sigils") return (b.sigils || 0) - (a.sigils || 0);
+      if (sortBy === "total") {
+        if (b.totalUnits !== a.totalUnits) return b.totalUnits - a.totalUnits;
+        return (b.prestige || 0) - (a.prestige || 0);
+      }
       if (sortBy.startsWith("obj:")) {
         const objId = sortBy.replace("obj:", "");
         return getPlayerContrib(b, objId) - getPlayerContrib(a, objId);
       }
+      if (b.sharePct !== a.sharePct) return b.sharePct - a.sharePct;
       if (b.totalUnits !== a.totalUnits) return b.totalUnits - a.totalUnits;
       return (b.prestige || 0) - (a.prestige || 0);
     });
@@ -1904,36 +1887,50 @@ function renderPolls() {
 }
 
 /* ADMIN — ÚPLNĚ BASIC ÚPRAVA OBJECTIVES + PROPISOVÁNÍ NA PŘEHLED */
+function readObjectiveInputs(obj) {
+  const safeId = obj.id;
+  const titleEl = document.getElementById(`objTitleInput_${safeId}`);
+  const tierEl = document.getElementById(`objTierSelect_${safeId}`);
+  const doneEl = document.getElementById(`objDoneInput_${safeId}`);
+  const targetEl = document.getElementById(`objTargetInput_${safeId}`);
+
+  const nextTitle = titleEl ? (titleEl.value.trim() || obj.title) : obj.title;
+  const nextTier = tierEl
+    ? Math.min(10, Math.max(0, parseInt(tierEl.value, 10) ?? 0))
+    : Math.min(10, Math.max(0, Number(obj.activeTier) ?? 0));
+
+  const nextDone = doneEl && doneEl.value.trim() !== ""
+    ? Math.max(0, parseInt(doneEl.value, 10) || 0)
+    : (typeof obj.currentDone === "number" && !Number.isNaN(obj.currentDone)
+        ? Math.max(0, obj.currentDone)
+        : getPlayersSumForObjective(obj.id));
+
+  const nextTiers = Array.isArray(obj.tiers) && obj.tiers.length === 11
+    ? [...obj.tiers]
+    : [...EMPTY_TIERS_T0_TO_T10];
+
+  if (targetEl) {
+    nextTiers[nextTier] = parseOptionalTierGoal(targetEl.value);
+  }
+
+  return {
+    title: nextTitle,
+    activeTier: nextTier,
+    currentDone: nextDone,
+    tiers: nextTiers
+  };
+}
+
 function applyObjectiveFormToData(objId, triggerSave = false) {
   if (!isAdmin()) return;
   const obj = data.objectives.find(o => o.id === objId);
   if (!obj) return;
 
-  const titleEl = document.getElementById(`objTitleInput_${objId}`);
-  const tierEl = document.getElementById(`objTierSelect_${objId}`);
-  const doneEl = document.getElementById(`objDoneInput_${objId}`);
-  const targetEl = document.getElementById(`objTargetInput_${objId}`);
-
-  if (titleEl) {
-    const cleanTitle = titleEl.value.trim();
-    if (cleanTitle) obj.title = cleanTitle;
-  }
-
-  if (tierEl) {
-    obj.activeTier = Math.min(10, Math.max(0, parseInt(tierEl.value, 10) ?? 0));
-  }
-
-  if (doneEl) {
-    const rawVal = doneEl.value.trim();
-    obj.currentDone = rawVal === "" ? 0 : Math.max(0, parseInt(rawVal, 10) || 0);
-  }
-
-  if (targetEl) {
-    if (!Array.isArray(obj.tiers) || obj.tiers.length !== 11) {
-      obj.tiers = [...EMPTY_TIERS_T0_TO_T10];
-    }
-    obj.tiers[obj.activeTier] = parseOptionalTierGoal(targetEl.value);
-  }
+  const updated = readObjectiveInputs(obj);
+  obj.title = updated.title;
+  obj.activeTier = updated.activeTier;
+  obj.currentDone = updated.currentDone;
+  obj.tiers = updated.tiers;
 
   const info = getObjectiveProgressInfo(obj);
   const rulerBox = document.getElementById(`adminObjRuler_${objId}`);
@@ -1950,17 +1947,11 @@ function applyObjectiveFormToData(objId, triggerSave = false) {
     saveData(true, true, true);
     showToast(`Uloženo a propsáno na přehled: ${obj.title}`);
   } else {
+    data.lastUpdated = formatNowCzech();
+    localStorage.setItem("lap_pit_data_v15", JSON.stringify(data));
     renderObjectives();
-    renderTotalChestBanners();
     renderPodium();
     renderRoster();
-    data.lastUpdated = formatNowCzech();
-    const tsText = `🕒 Poslední aktualizace: ${data.lastUpdated}`;
-    document.getElementById("overviewLastUpdated").textContent = tsText;
-    document.getElementById("objLastUpdated").textContent = tsText;
-    const adminTs = document.getElementById("adminLastUpdated");
-    if (adminTs) adminTs.textContent = tsText;
-    localStorage.setItem("lap_pit_data_v15", JSON.stringify(data));
     if (!isSyncingFromRemote) {
       pushRemoteData(data).catch(() => {});
     }
@@ -2199,32 +2190,34 @@ function addObjective() {
   if (!isAdmin()) return;
   const title = document.getElementById("newObjTitle").value.trim();
   const unit = document.getElementById("newObjUnit").value.trim() || "bodů";
-
-  const tiers = [];
-  for (let t = 0; t <= 10; t++) {
-    tiers.push(parseOptionalTierGoal(document.getElementById(`tierGoal_${t}`)?.value));
-  }
+  const initialTier = Math.min(10, Math.max(0, parseInt(document.getElementById("newObjInitialTier")?.value, 10) || 0));
+  const initialTarget = parseOptionalTierGoal(document.getElementById("newObjInitialTarget")?.value);
 
   if (!title) {
     showToast("Vyplň název objective.");
     return;
   }
 
+  const tiers = [...EMPTY_TIERS_T0_TO_T10];
+  tiers[initialTier] = initialTarget;
+
   data.objectives.push({
     id: `obj_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     title,
     unit,
     tiers,
-    activeTier: 0,
+    activeTier: initialTier,
     currentDone: 0,
     rewardCompleted: false
   });
 
   document.getElementById("newObjTitle").value = "";
   document.getElementById("newObjUnit").value = "";
-  for (let t = 0; t <= 10; t++) {
-    const el = document.getElementById(`tierGoal_${t}`);
-    if (el) el.value = "";
+  if (document.getElementById("newObjInitialTier")) {
+    document.getElementById("newObjInitialTier").value = "0";
+  }
+  if (document.getElementById("newObjInitialTarget")) {
+    document.getElementById("newObjInitialTarget").value = "";
   }
 
   saveData();
@@ -2500,7 +2493,6 @@ function showToast(msg) {
 }
 
 function renderAll(options = {}) {
-  renderTierGoalInputs();
   renderObjectives();
   renderPodium();
   renderRoster();
