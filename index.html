@@ -29,22 +29,22 @@
           <span id="authUserRole" class="role-tag">user</span>
         </div>
       </div>
-      <button type="button" class="btn btn-dark" onclick="copyShareLink()">🔗 Sdílet</button>
-      <button type="button" class="btn btn-green" id="openAuthBtn" onclick="openAuthModal()">🔐 Přihlásit se</button>
-      <button type="button" class="btn btn-red" id="logoutBtn" style="display: none;" onclick="logoutUser()">Odhlásit</button>
+      <button class="btn btn-dark" onclick="copyShareLink()">🔗 Sdílet</button>
+      <button class="btn btn-green" id="openAuthBtn" onclick="openAuthModal()">🔐 Přihlásit se</button>
+      <button class="btn btn-red" id="logoutBtn" style="display: none;" onclick="logoutUser()">Odhlásit</button>
     </div>
   </header>
 
   <!-- NAVIGAČNÍ ZÁLOŽKY -->
   <nav class="nav-wrapper">
     <div class="nav-tabs">
-      <button type="button" class="nav-tab active" data-tab="overview" onclick="switchTab('overview')">🏆 Přehled & Top</button>
-      <button type="button" class="nav-tab" data-tab="roster" onclick="switchTab('roster')">👥 Seznam hráčů</button>
-      <button type="button" class="nav-tab" data-tab="objectives" onclick="switchTab('objectives')">🎯 Objectives</button>
-      <button type="button" class="nav-tab" data-tab="pants" onclick="switchTab('pants')">👖 Pants</button>
-      <button type="button" class="nav-tab" data-tab="announcements" onclick="switchTab('announcements')">📢 Oznámení</button>
-      <button type="button" class="nav-tab" data-tab="history" onclick="switchTab('history')">📜 Historie týdnů</button>
-      <button type="button" class="nav-tab" data-tab="admin" data-admin-only onclick="switchTab('admin')">🛠️ Správa (Admin)</button>
+      <button class="nav-tab active" data-tab="overview" onclick="switchTab('overview')">🏆 Přehled & Top</button>
+      <button class="nav-tab" data-tab="roster" onclick="switchTab('roster')">👥 Seznam hráčů</button>
+      <button class="nav-tab" data-tab="objectives" onclick="switchTab('objectives')">🎯 Objectives</button>
+      <button class="nav-tab" data-tab="pants" onclick="switchTab('pants')">👖 Pants</button>
+      <button class="nav-tab" data-tab="announcements" onclick="switchTab('announcements')">📢 Oznámení</button>
+      <button class="nav-tab" data-tab="history" onclick="switchTab('history')">📜 Historie týdnů</button>
+      <button class="nav-tab" data-tab="admin" data-admin-only onclick="switchTab('admin')">🛠️ Správa (Admin)</button>
     </div>
   </nav>
 
@@ -112,10 +112,29 @@
         <div class="last-updated-pill" id="objLastUpdated">🕒 Poslední aktualizace: —</div>
       </div>
       <div id="objTotalChestBanner" class="total-chest-banner"></div>
+
+      <!-- PANEL PRO POTVRZENÍ A ULOŽENÍ CÍLŮ / TIERŮ OBJECTIVES -->
+      <div id="objectivesSavePanel" class="objectives-save-bar">
+        <div class="objectives-save-meta">
+          <span id="objectivesDirtyBadge" class="dirty-badge saved">✓ Vše uloženo v databázi</span>
+          <span id="objectivesDirtyHint" class="muted-text">
+            Úpravy tierů a cílů objectives se uloží do databáze a promítnou do přehledu až po potvrzení.
+          </span>
+        </div>
+        <div class="objectives-save-actions">
+          <button type="button" id="saveObjectivesBtn" class="btn btn-green" onclick="saveObjectivesChanges()" disabled>
+            💾 Uložit cíle do databáze
+          </button>
+          <button type="button" id="discardObjectivesBtn" class="btn btn-dark" onclick="discardObjectivesChanges()" disabled>
+            ↩️ Vrátit změny
+          </button>
+        </div>
+      </div>
+
       <div class="objectives-detail-grid" id="objectivesDetailGrid"></div>
     </section>
 
-    <!-- ZÁLOŽKA 4: PANTS -->
+    <!-- ZÁLOŽKA 4: PANTS (OTEVÍRÁNÍ BEDEN & ENCHANTOVÁNÍ T1–T3) -->
     <section id="tab-pants" class="tab-content">
       <div id="pantsAuthGate" class="admin-card pants-lock-card" style="display: none;">
         <div class="pants-lock-icon">🔒</div>
@@ -133,6 +152,7 @@
         </div>
 
         <div class="pants-layout">
+          <!-- LEVÝ PANEL: VÝBĚR BEDNY A OTEVÍRÁNÍ -->
           <div class="admin-card" style="margin-bottom: 0;">
             <h3>🎁 1. Výběr bedny (Tier 8 – Tier 10)</h3>
 
@@ -157,12 +177,14 @@
             <div class="pants-stats-row" id="pantsStatsRow"></div>
           </div>
 
+          <!-- PRAVÝ PANEL: AKTIVNÍ PANTY A ENCHANTOVÁNÍ T1 -> T2 -> T3 -->
           <div class="admin-card" style="margin-bottom: 0;">
             <h3>✨ 2. Enchantování pantů (Tier 1 → Tier 2 → Tier 3)</h3>
             <div id="activePantsWorkbench"></div>
           </div>
         </div>
 
+        <!-- PŘIDÁVÁNÍ ENCHANTŮ POUZE PRO ADMINA -->
         <div class="admin-card" id="adminEnchantCreatorCard" style="margin-top: 18px; display: none;">
           <h3>🛠️ Přidat nový enchant (Pouze Admin)</h3>
           <div class="admin-grid">
@@ -185,6 +207,7 @@
           </div>
         </div>
 
+        <!-- SEZNAM ENCHANTŮ A RARIT -->
         <div class="admin-card" style="margin-top: 18px;">
           <h3>📜 Přehled možných enchantů (Tier pantů 1 → 2 → 3, tier enchantu náhodný I–III)</h3>
           <p class="muted-text" style="margin-bottom: 12px;">
@@ -195,6 +218,7 @@
           <div class="objectives-detail-grid" id="enchantCatalogGrid" style="margin-bottom: 0;"></div>
         </div>
 
+        <!-- ULOŽENÉ TIER 3 PANTY -->
         <div class="admin-card" style="margin-top: 18px;">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
             <h3 style="margin-bottom: 0;">🏆 Tvoje dokončené Tier 3 Panty</h3>
@@ -209,14 +233,14 @@
     <section id="tab-announcements" class="tab-content">
       <div class="hero-header">
         <h1>OZNÁMENÍ & PLÁN AKCÍ</h1>
-        <p>Každý přihlášený hráč může založit své oznámení a smazat pouze své vlastní</p>
+        <p>Co se bude dělat, kdy akce začíná, kdo oznámení vytvořil a kdo se k čemu hlásí</p>
       </div>
 
       <div id="announcementLoginGate" class="admin-card pants-lock-card" style="display: none;">
         <div class="pants-lock-icon">🔐</div>
-        <h3>Pro vytvoření nebo správu oznámení je nutné přihlášení</h3>
+        <h3>Pro vytvoření oznámení je nutné přihlášení</h3>
         <p class="muted-text" style="margin-bottom: 14px;">
-          Přihlas se svým účtem, aby šlo založit oznámení a mazat pouze svá vlastní oznámení. Číst oznámení může každý.
+          Přihlas se svým účtem, aby bylo vidět, kdo oznámení vytvořil. Číst oznámení může každý.
         </p>
         <button type="button" class="btn btn-green" onclick="openAuthModal()">🔐 Přihlásit se</button>
       </div>
@@ -275,8 +299,8 @@
         <h3>📅 Název aktuálního týdne, přehled účtů & záloha dat</h3>
         <div class="add-player-row" style="margin-bottom: 12px;">
           <input type="text" id="adminWeekName" placeholder="Např. Týden #1 • LAP The Pit" />
-          <button type="button" class="btn btn-green" onclick="saveWeekName()">💾 Uložit název týdne</button>
-          <button type="button" class="btn btn-dark" onclick="copyAllCredentials()">📋 Kopírovat přehled účtů</button>
+          <button class="btn btn-green" onclick="saveWeekName()">💾 Uložit název týdne</button>
+          <button class="btn btn-dark" onclick="copyAllCredentials()">📋 Kopírovat přehled účtů</button>
         </div>
         <div class="admin-actions">
           <button type="button" class="btn btn-dark" onclick="exportBackupJson()">⬇️ Stáhnout zálohu (JSON)</button>
@@ -322,7 +346,7 @@
         </p>
         <div class="admin-grid" id="tierGoalsGrid" style="margin-top: 10px;"></div>
 
-        <button type="button" class="btn btn-green" onclick="addObjective()">➕ Přidat společný objective</button>
+        <button class="btn btn-green" onclick="addObjective()">➕ Přidat společný objective</button>
       </div>
 
       <div class="admin-card">
@@ -337,7 +361,7 @@
           </select>
           <input type="number" min="0" max="100" id="newPrestige" placeholder="Prestige (např. 20)" />
           <input type="number" min="0" id="newWeeklyGoal" placeholder="Týdenní cíl (např. 2500)" />
-          <button type="button" class="btn btn-green" onclick="addPlayer()">Přidat hráče</button>
+          <button class="btn btn-green" onclick="addPlayer()">Přidat hráče</button>
         </div>
       </div>
 
@@ -353,8 +377,8 @@
         <h3>📦 Uzavření týdne & sdílení</h3>
         <p class="muted-text">Uzavřením uložíš týden do historie (i když tam není žádný objective) a vynuluješ týdenní příspěvky hráčů pro další týden.</p>
         <div class="admin-actions">
-          <button type="button" class="btn btn-green" onclick="copyShareLink()">🔗 Kopírovat sdílecí odkaz</button>
-          <button type="button" class="btn btn-red" onclick="closeWeek()">🔒 Uzavřít týden</button>
+          <button class="btn btn-green" onclick="copyShareLink()">🔗 Kopírovat sdílecí odkaz</button>
+          <button class="btn btn-red" onclick="closeWeek()">🔒 Uzavřít týden</button>
         </div>
       </div>
     </section>
@@ -369,7 +393,7 @@
           <h2 id="playerModalNick">Nick</h2>
           <p id="playerModalMeta">Rank • Prestige</p>
         </div>
-        <button type="button" class="btn btn-dark close-x" onclick="closePlayerModal()">✕</button>
+        <button class="btn btn-dark close-x" onclick="closePlayerModal()">✕</button>
       </div>
       <div id="playerModalBody"></div>
     </div>
@@ -384,7 +408,7 @@
           <h2>Přihlášení do LAP</h2>
           <p>Love & Peace • The Pit • mc.survival-games.cz</p>
         </div>
-        <button type="button" class="btn btn-dark close-x" onclick="closeAuthModal()">✕</button>
+        <button class="btn btn-dark close-x" onclick="closeAuthModal()">✕</button>
       </div>
 
       <form id="authForm" onsubmit="submitAuthForm(event)">
