@@ -161,9 +161,12 @@ function normalizeObjective(obj) {
     tiers[activeTier] = explicitGoal;
   }
 
-  const currentDone = typeof obj.currentDone === "number" && !Number.isNaN(obj.currentDone)
-    ? Math.max(0, obj.currentDone)
-    : null;
+  const rawDoneCandidate = obj.currentDone ?? obj.done ?? obj.progress;
+  const currentDone = typeof rawDoneCandidate === "number" && !Number.isNaN(rawDoneCandidate)
+    ? Math.max(0, rawDoneCandidate)
+    : (rawDoneCandidate !== null && rawDoneCandidate !== undefined && String(rawDoneCandidate).trim() !== "" && !Number.isNaN(Number(rawDoneCandidate))
+        ? Math.max(0, Number(rawDoneCandidate))
+        : null);
 
   return {
     ...obj,
