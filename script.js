@@ -53,7 +53,6 @@ const DEFAULT_ENCHANT_CATALOG = [
 const RARITY_WEIGHTS = { common: 60, rare: 30, epic: 10 };
 const ROMAN_TIERS = ["", "I", "II", "III"];
 const EMPTY_TIERS_T0_TO_T10 = Array(11).fill(null);
-const FALLBACK_AVATAR = "https://mc-heads.net/avatar/MHF_Steve/48";
 
 function cloneData(val) {
   return JSON.parse(JSON.stringify(val));
@@ -76,6 +75,37 @@ function formatNowCzech() {
     hour: "2-digit",
     minute: "2-digit"
   });
+}
+
+function initChristmasSnowfall() {
+  const layer = document.getElementById("snowfallLayer");
+  if (!layer || layer.dataset.initialized === "1") return;
+  layer.dataset.initialized = "1";
+
+  const glyphs = ["❄", "❅", "❆", "✦"];
+  const count = window.innerWidth < 640 ? 22 : 38;
+
+  for (let i = 0; i < count; i++) {
+    const flake = document.createElement("span");
+    flake.className = "snowflake";
+    flake.textContent = glyphs[i % glyphs.length];
+
+    const leftPct = (Math.random() * 100).toFixed(2);
+    const sizePx = (11 + Math.random() * 11).toFixed(1);
+    const durationSec = (9 + Math.random() * 11).toFixed(2);
+    const delaySec = (-Math.random() * 18).toFixed(2);
+    const driftPx = ((Math.random() - 0.5) * 90).toFixed(1) + "px";
+    const opacity = (0.35 + Math.random() * 0.55).toFixed(2);
+
+    flake.style.left = `${leftPct}%`;
+    flake.style.fontSize = `${sizePx}px`;
+    flake.style.opacity = opacity;
+    flake.style.animationDuration = `${durationSec}s`;
+    flake.style.animationDelay = `${delaySec}s`;
+    flake.style.setProperty("--drift", driftPx);
+
+    layer.appendChild(flake);
+  }
 }
 
 function createInitialPlayers() {
@@ -377,7 +407,7 @@ async function initRealtimeSync() {
       await pushRemoteData(data);
     }
   } catch {
-    // Lokální režim funguje bezchybně i bez sítě
+    // Lokální režim funguje i bez sítě
   }
 
   setInterval(async () => {
@@ -1411,6 +1441,11 @@ function renderRoster() {
       if (b.totalUnits !== a.totalUnits) return b.totalUnits - a.totalUnits;
       return (b.prestige || 0) - (a.prestige || 0);
     });
+
+  const countSubtitle = document.getElementById("playersCountSubtitle");
+  if (countSubtitle) {
+    countSubtitle.textContent = `Zobrazeno ${list.length} z ${data.players.length} členů guildy • Kliknutím otevřeš detail`;
+  }
 
   if (list.length === 0) {
     rosterGrid.innerHTML = `<p class="muted-text">Žádný hráč neodpovídá filtru.</p>`;
@@ -2527,6 +2562,7 @@ function renderAll(options = {}) {
   applyPermissions();
 }
 
+initChristmasSnowfall();
 bindStaticEvents();
 renderAll();
 initRealtimeSync();
