@@ -151,11 +151,16 @@ function parseOptionalTierGoal(val) {
 }
 
 function normalizeObjective(obj) {
+  const activeTier = Math.min(10, Math.max(0, Number(obj.activeTier) ?? 0));
   const tiers = Array.isArray(obj.tiers) && obj.tiers.length === 11
     ? obj.tiers.map(parseOptionalTierGoal)
     : [...EMPTY_TIERS_T0_TO_T10];
 
-  const activeTier = Math.min(10, Math.max(0, Number(obj.activeTier) ?? 0));
+  const explicitGoal = parseOptionalTierGoal(obj.tierGoal ?? obj.targetTotal ?? obj.goal);
+  if (explicitGoal !== null && tiers[activeTier] === null) {
+    tiers[activeTier] = explicitGoal;
+  }
+
   const currentDone = typeof obj.currentDone === "number" && !Number.isNaN(obj.currentDone)
     ? Math.max(0, obj.currentDone)
     : null;
@@ -935,7 +940,7 @@ function renderPantsTab() {
   }
 }
 
-/* OBJECTIVES & PODIUM & ROSTER */
+/* OBJECTIVES & RYSKA S % SPLNĚNÍ */
 function renderTierGoalInputs() {
   const grid = document.getElementById("tierGoalsGrid");
   if (!grid || grid.children.length > 0) return;
@@ -971,17 +976,6 @@ function getPlayersSumForObjective(objId) {
   return data.players.reduce((sum, p) => sum + getPlayerContrib(p, objId), 0);
 }
 
-function getNextConfiguredTierGoal(obj, fromTier) {
-  const tiers = obj.tiers || EMPTY_TIERS_T0_TO_T10;
-  for (let t = fromTier + 1; t <= 10; t++) {
-    const g = parseOptionalTierGoal(tiers[t]);
-    if (g !== null) {
-      return { tier: t, goal: g };
-    }
-  }
-  return null;
-}
-
 function getObjectiveProgressInfo(obj) {
   const tiers = obj.tiers || EMPTY_TIERS_T0_TO_T10;
   const activeTier = Math.min(10, Math.max(0, Number(obj.activeTier) ?? 0));
@@ -995,15 +989,10 @@ function getObjectiveProgressInfo(obj) {
   const doneValue = rewardCompleted && tierGoal ? Math.max(rawDone, tierGoal) : rawDone;
   const pct = rewardCompleted
     ? 100
-    : (tierGoal ? Math.min(100, Math.round((doneValue / tierGoal) * 100)) : 0);
+    : (tierGoal ? Math.min(100, Math.max(0, Math.round((doneValue / tierGoal) * 100))) : 0);
 
   const missingInCurrentTier = tierGoal
     ? Math.max(0, tierGoal - doneValue)
-    : null;
-
-  const nextTierObj = getNextConfiguredTierGoal(obj, activeTier);
-  const missingToNextTier = nextTierObj
-    ? Math.max(0, nextTierObj.goal - doneValue)
     : null;
 
   const reachedTier = rewardCompleted || (tierGoal && doneValue >= tierGoal)
@@ -1012,7 +1001,7 @@ function getObjectiveProgressInfo(obj) {
 
   let tierBadgeText = `Tier T${activeTier}`;
   if (rewardCompleted) {
-    tierBadgeText = `🎁 Reward bedna • T${activeTier} splněno`;
+    tierBadgeText = `🎁 Splněno • T${activeTier}`;
   } else if (tierGoal && doneValue >= tierGoal) {
     tierBadgeText = `T${activeTier} splněno`;
   }
@@ -1023,12 +1012,40 @@ function getObjectiveProgressInfo(obj) {
     doneValue,
     pct,
     missingInCurrentTier,
-    nextTierObj,
-    missingToNextTier,
     reachedTier,
     rewardCompleted,
     tierBadgeText
   };
+}
+
+function buildPercentageRulerHtml(info, unit = "bodů") {
+  const hasGoal = Boolean(info.tierGoal) || info.rewardCompleted;
+  const displayPct = hasGoal ? `${info.pct} %` : "—";
+  const markerPos = hasGoal ? Math.min(100, Math.max(0, info.pct)) : 0;
+
+  const statusCaption = info.tierGoal
+    ? `${info.doneValue.toLocaleString("cs-CZ")} / ${info.tierGoal.toLocaleString("cs-CZ")} ${escapeHtml(unit)} • Chybí: <strong>${info.missingInCurrentTier.toLocaleString("cs-CZ")}</strong>`
+    : `${info.doneValue.toLocaleString("cs-CZ")} ${escapeHtml(unit)} • Cíl nezadán`;
+
+  return `
+    <div class="pct-ruler-wrap" style="margin-top:10px;">
+      <div class="pct-ruler-header" style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:6px;gap:8px;flex-wrap:wrap;">
+        <span>${statusCaption}</span>
+        <strong style="color:#facc15;font-size:13px;">${displayPct}</strong>
+      </div>
+      <div class="pct-ruler-track" style="position:relative;height:14px;border-radius:999px;background:rgba(15,23,42,0.85);border:1px solid rgba(148,163,184,0.28);overflow:visible;">
+        <div style="height:100%;width:${markerPos}%;border-radius:999px;background:${info.rewardCompleted ? "linear-gradient(90deg,#f59e0b,#facc15)" : "linear-gradient(90deg,#22c55e,#4ade80)"};transition:width 0.25s ease;"></div>
+        <div title="${displayPct}" style="position:absolute;top:-5px;left:${markerPos}%;transform:translateX(-50%);width:4px;height:24px;border-radius:2px;background:#ffffff;box-shadow:0 0 8px rgba(255,255,255,0.9);pointer-events:none;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;opacity:0.7;margin-top:5px;">
+        <span>0%</span>
+        <span>25%</span>
+        <span>50%</span>
+        <span>75%</span>
+        <span>100%</span>
+      </div>
+    </div>
+  `;
 }
 
 function getTotalChestInfo() {
@@ -1112,9 +1129,9 @@ function renderObjectives() {
   if (adminTs) adminTs.textContent = tsText;
 
   document.getElementById("weekSubtitle").textContent =
-    `${data.weekName} • mc.survival-games.cz • Společné objectives (T0–T10) a příspěvky členů`;
+    `${data.weekName} • mc.survival-games.cz • Společné objectives a příspěvky členů`;
   document.getElementById("objTabSubtitle").textContent =
-    `${data.weekName} • Postup guildy napříč tiery T0 až T10`;
+    `${data.weekName} • Postup guildy a procenta splnění`;
 
   renderTotalChestBanners();
 
@@ -1134,7 +1151,7 @@ function renderObjectives() {
     detail.innerHTML = `
       <div class="admin-card">
         <h3>Zatím žádné společné objectives</h3>
-        <p class="muted-text">Přihlas se jako správce (bowman) a přidej společný objective s tiery T0–T10.</p>
+        <p class="muted-text">Přihlas se jako správce (bowman) a přidej společný objective.</p>
       </div>
     `;
     return;
@@ -1144,11 +1161,7 @@ function renderObjectives() {
     const info = getObjectiveProgressInfo(obj);
     const ratioText = info.tierGoal
       ? `T${info.activeTier}: ${info.doneValue.toLocaleString("cs-CZ")} / ${info.tierGoal.toLocaleString("cs-CZ")} ${obj.unit}`
-      : `T${info.activeTier}: ${info.doneValue.toLocaleString("cs-CZ")} ${obj.unit} (cíl nenastaven)`;
-
-    const missingText = info.missingInCurrentTier !== null
-      ? `Chybí do T${info.activeTier}: <strong>${info.missingInCurrentTier.toLocaleString("cs-CZ")} ${escapeHtml(obj.unit)}</strong>`
-      : "Cíl aktuálního tieru bez hodnoty";
+      : `T${info.activeTier}: ${info.doneValue.toLocaleString("cs-CZ")} ${obj.unit}`;
 
     return `
       <div class="obj-summary-card ${info.rewardCompleted ? "reward-done" : ""}">
@@ -1161,59 +1174,23 @@ function renderObjectives() {
           </div>
           <div class="obj-goal-pill">${escapeHtml(ratioText)}</div>
         </div>
-        <div class="progress-track">
-          <div class="progress-bar ${info.rewardCompleted ? "reward" : ""}" style="width:${info.pct}%"></div>
-        </div>
-        <div class="obj-progress-top">
-          <span>${missingText}</span>
-          <strong>${info.tierGoal || info.rewardCompleted ? `${info.pct} %` : "—"}</strong>
-        </div>
+        ${buildPercentageRulerHtml(info, obj.unit)}
       </div>
     `;
   }).join("");
 
   detail.innerHTML = data.objectives.map((obj, idx) => {
     const info = getObjectiveProgressInfo(obj);
-    const tierListHtml = (obj.tiers || EMPTY_TIERS_T0_TO_T10).map((rawGoal, tIdx) => {
-      const goal = parseOptionalTierGoal(rawGoal);
-      const tNum = tIdx;
-      const isCurrent = tNum === info.activeTier;
-      const isDone = tNum < info.activeTier || (tNum === info.activeTier && (info.rewardCompleted || (goal && info.doneValue >= goal)));
-      const statusIcon = isDone ? "✅" : (isCurrent ? "🔥" : "⬜");
-
-      let rightLabel = "Bez hodnoty";
-      if (goal) {
-        const diff = Math.max(0, goal - info.doneValue);
-        rightLabel = isDone
-          ? `${goal.toLocaleString("cs-CZ")} ${obj.unit} (splněno)`
-          : `${goal.toLocaleString("cs-CZ")} ${obj.unit} • chybí ${diff.toLocaleString("cs-CZ")}`;
-      }
-
-      return `
-        <div class="tier-row">
-          <span>${statusIcon} <strong>Tier T${tNum}</strong> ${isCurrent ? "(aktuální)" : ""}</span>
-          <span>${escapeHtml(rightLabel)}</span>
-        </div>
-      `;
-    }).join("");
-
-    const nextTierHint = info.nextTierObj
-      ? `<div class="player-sub mb-10">Do dalšího nastaveného tieru (T${info.nextTierObj.tier}) chybí: <strong>${info.missingToNextTier.toLocaleString("cs-CZ")} ${escapeHtml(obj.unit)}</strong></div>`
-      : `<div class="player-sub mb-10">Další nastavený tier není zadán</div>`;
-
-    const summaryLine = info.tierGoal
-      ? `Aktuálně v T${info.activeTier}: <strong>${info.doneValue.toLocaleString("cs-CZ")} / ${info.tierGoal.toLocaleString("cs-CZ")} ${escapeHtml(obj.unit)}</strong> (${info.pct} %) • Chybí: <strong>${info.missingInCurrentTier.toLocaleString("cs-CZ")} ${escapeHtml(obj.unit)}</strong>`
-      : `Aktuálně v T${info.activeTier}: <strong>${info.doneValue.toLocaleString("cs-CZ")} ${escapeHtml(obj.unit)}</strong> (cíl bez hodnoty)`;
-
     return `
       <div class="admin-card ${info.rewardCompleted ? "reward-done" : ""}">
         <div class="obj-badges-row">
           <span class="obj-badge ${info.rewardCompleted ? "reward" : ""}">OBJECTIVE ${idx + 1} • ${escapeHtml(info.tierBadgeText)}</span>
         </div>
         <h3>${escapeHtml(obj.title)}</h3>
-        <p class="muted-text mb-6">${summaryLine}</p>
-        ${nextTierHint}
-        ${tierListHtml}
+        <p class="muted-text mb-6">
+          Aktuální tier: <strong>T${info.activeTier}</strong> • Splněno: <strong>${info.doneValue.toLocaleString("cs-CZ")}</strong> ${info.tierGoal ? `/ <strong>${info.tierGoal.toLocaleString("cs-CZ")}</strong>` : ""} ${escapeHtml(obj.unit)}
+        </p>
+        ${buildPercentageRulerHtml(info, obj.unit)}
       </div>
     `;
   }).join("");
@@ -1924,7 +1901,7 @@ function renderPolls() {
   wrap.innerHTML = polls.map(p => buildPollCardHtml(p)).join("");
 }
 
-/* ADMIN */
+/* ADMIN — JEDNODUCHÉ ZADÁNÍ: NÁZEV, TIER, KOLIK JE, CELKOVĚ KOLIK JE TŘEBA + RYSKA S % */
 function renderAdmin() {
   if (!isAdmin()) return;
 
@@ -1958,7 +1935,6 @@ function renderAdmin() {
   } else {
     objWrap.innerHTML = data.objectives.map((obj, idx) => {
       const info = getObjectiveProgressInfo(obj);
-      const isCustomDone = typeof obj.currentDone === "number" && !Number.isNaN(obj.currentDone);
       const safeId = escapeHtml(obj.id);
 
       let tierOptionsHtml = "";
@@ -1966,66 +1942,61 @@ function renderAdmin() {
         tierOptionsHtml += `<option value="${t}" ${info.activeTier === t ? "selected" : ""}>Tier T${t}</option>`;
       }
 
-      const tierEditors = (obj.tiers || EMPTY_TIERS_T0_TO_T10).map((rawGoal, tIdx) => {
-        const goal = parseOptionalTierGoal(rawGoal);
-        const inputId = `tierInput_${safeId}_${tIdx}`;
-        return `
-          <label for="${inputId}">
-            T${tIdx}:
-            <input
-              id="${inputId}"
-              type="number"
-              min="1"
-              value="${goal ?? ""}"
-              placeholder="Cíl"
-              oninput="updateObjectiveTierLive('${safeId}', ${tIdx}, this.value)"
-            />
-          </label>
-        `;
-      }).join("");
-
-      const activeGoalInputId = `activeGoalInput_${safeId}`;
-
       return `
-        <div class="admin-player-item admin-obj-card ${info.rewardCompleted ? "reward-done" : ""}">
-          <div class="card-header-row">
-            <div>
-              <strong>#${idx + 1} ${escapeHtml(obj.title)}</strong>
-              <span class="player-sub">• ${escapeHtml(info.tierBadgeText)}${info.tierGoal || info.rewardCompleted ? ` (${info.pct} %)` : ""}</span>
+        <div class="admin-player-item admin-obj-card ${info.rewardCompleted ? "reward-done" : ""}" id="adminObjCard_${safeId}">
+          <div class="card-header-row" style="gap:10px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <strong>#${idx + 1}</strong>
+              <label style="margin:0;">
+                Název objective:
+                <input
+                  id="objTitleInput_${safeId}"
+                  type="text"
+                  value="${escapeHtml(obj.title)}"
+                  placeholder="Název objective"
+                  oninput="updateObjectiveSimpleLive('${safeId}')"
+                />
+              </label>
             </div>
-            <div class="admin-inputs">
+
+            <div class="admin-inputs" style="gap:8px;flex-wrap:wrap;">
               <label>
                 Tier:
-                <select onchange="setObjectiveActiveTier('${safeId}', this.value)">
+                <select id="objTierSelect_${safeId}" onchange="setObjectiveActiveTier('${safeId}', this.value)">
                   ${tierOptionsHtml}
                 </select>
               </label>
               <label>
-                Hotovo:
-                <input type="number" min="0" value="${info.doneValue}" onchange="setObjectiveDoneValue('${safeId}', this.value)" />
-              </label>
-              <label for="${activeGoalInputId}">
-                Z kolika:
+                Kolik je:
                 <input
-                  id="${activeGoalInputId}"
+                  id="objDoneInput_${safeId}"
+                  type="number"
+                  min="0"
+                  value="${info.doneValue}"
+                  oninput="updateObjectiveSimpleLive('${safeId}')"
+                />
+              </label>
+              <label>
+                Celkově kolik je třeba:
+                <input
+                  id="objTargetInput_${safeId}"
                   type="number"
                   min="1"
                   value="${info.tierGoal ?? ""}"
-                  placeholder="Zadej cíl"
-                  oninput="syncActiveGoalToTier('${safeId}', ${info.activeTier}, this.value)"
+                  placeholder="Cíl"
+                  oninput="updateObjectiveSimpleLive('${safeId}')"
                 />
               </label>
-              <button type="button" class="btn btn-green" onclick="saveObjectiveTiersNow('${safeId}')">💾 Uložit cíle</button>
+              <button type="button" class="btn btn-green" onclick="saveObjectiveSimpleNow('${safeId}')">💾 Uložit</button>
               <button type="button" class="btn ${info.rewardCompleted ? "btn-gold" : "btn-dark"}" onclick="toggleObjectiveRewardCompleted('${safeId}')">
-                ${info.rewardCompleted ? "🎁 Bedna splněna (zrušit)" : "🎁 Reward bedna splněna"}
+                ${info.rewardCompleted ? "🎁 Splněno (zrušit)" : "🎁 Označit splněno"}
               </button>
-              ${isCustomDone ? `<button type="button" class="btn btn-dark" onclick="resetObjectiveDoneAuto('${safeId}')">Auto součet hráčů</button>` : ""}
               <button type="button" class="btn btn-red" onclick="removeObjective('${safeId}')">Smazat</button>
             </div>
           </div>
-          <div class="admin-inputs admin-tier-row">
-            <span class="player-sub">Cíle všech tierů T0–T10 (prázdné = bez hodnoty):</span>
-            ${tierEditors}
+
+          <div id="adminObjRuler_${safeId}">
+            ${buildPercentageRulerHtml(info, obj.unit)}
           </div>
         </div>
       `;
@@ -2123,15 +2094,52 @@ function setObjectiveActiveTier(objId, tierVal) {
   }
 }
 
-function setObjectiveDoneValue(objId, val) {
+function updateObjectiveSimpleLive(objId) {
   if (!isAdmin()) return;
-  const num = Math.max(0, parseInt(val, 10) || 0);
   const obj = data.objectives.find(o => o.id === objId);
-  if (obj) {
-    obj.currentDone = num;
-    saveData();
-    showToast(`Aktualizováno splněno: ${num.toLocaleString("cs-CZ")} ${obj.unit}`);
+  if (!obj) return;
+
+  const titleEl = document.getElementById(`objTitleInput_${objId}`);
+  const tierEl = document.getElementById(`objTierSelect_${objId}`);
+  const doneEl = document.getElementById(`objDoneInput_${objId}`);
+  const targetEl = document.getElementById(`objTargetInput_${objId}`);
+
+  if (titleEl) {
+    obj.title = titleEl.value.trim() || "Objective";
   }
+  if (tierEl) {
+    obj.activeTier = Math.min(10, Math.max(0, parseInt(tierEl.value, 10) ?? 0));
+  }
+  if (doneEl && doneEl.value !== "") {
+    obj.currentDone = Math.max(0, parseInt(doneEl.value, 10) || 0);
+  }
+  if (targetEl) {
+    if (!Array.isArray(obj.tiers)) obj.tiers = [...EMPTY_TIERS_T0_TO_T10];
+    obj.tiers[obj.activeTier] = parseOptionalTierGoal(targetEl.value);
+  }
+
+  const info = getObjectiveProgressInfo(obj);
+  const rulerBox = document.getElementById(`adminObjRuler_${objId}`);
+  if (rulerBox) {
+    rulerBox.innerHTML = buildPercentageRulerHtml(info, obj.unit);
+  }
+
+  renderObjectives();
+  renderTotalChestBanners();
+  data.lastUpdated = formatNowCzech();
+  localStorage.setItem("lap_pit_data_v15", JSON.stringify(data));
+  if (!isSyncingFromRemote) {
+    pushRemoteData(data).catch(() => {});
+  }
+}
+
+function saveObjectiveSimpleNow(objId) {
+  if (!isAdmin()) return;
+  const obj = data.objectives.find(o => o.id === objId);
+  if (!obj) return;
+  updateObjectiveSimpleLive(objId);
+  saveData();
+  showToast(`Uloženo: ${obj.title} (Tier T${obj.activeTier})`);
 }
 
 function toggleObjectiveRewardCompleted(objId) {
@@ -2146,15 +2154,15 @@ function toggleObjectiveRewardCompleted(objId) {
       if (goal) {
         obj.currentDone = Math.max(Number(obj.currentDone) || 0, goal);
       }
-      if (idx < 10 && confirm(`Reward bedna u "${obj.title}" označena jako splněná. Posunout tier na T${idx + 1}?`)) {
+      if (idx < 10 && confirm(`Splnění u "${obj.title}" označeno. Posunout tier na T${idx + 1}?`)) {
         obj.activeTier = idx + 1;
         obj.rewardCompleted = false;
       }
     }
     saveData();
     showToast(obj.rewardCompleted
-      ? `🎁 Reward bedna u ${obj.title} označena jako splněná!`
-      : `Stav reward bedny u ${obj.title} aktualizován.`);
+      ? `🎁 ${obj.title} označeno jako splněno!`
+      : `Stav u ${obj.title} aktualizován.`);
   }
 }
 
@@ -2173,94 +2181,7 @@ function markAllObjectivesRewardCompleted() {
     }
   });
   saveData();
-  showToast("🎁 Všechny objectives označeny jako splněné přes Reward bednu!");
-}
-
-function resetObjectiveDoneAuto(objId) {
-  if (!isAdmin()) return;
-  const obj = data.objectives.find(o => o.id === objId);
-  if (obj) {
-    obj.currentDone = null;
-    obj.rewardCompleted = false;
-    saveData();
-    showToast("Vráceno na automatický součet hráčů.");
-  }
-}
-
-function persistObjectiveTiersSilently() {
-  data.lastUpdated = formatNowCzech();
-  localStorage.setItem("lap_pit_data_v15", JSON.stringify(data));
-  if (!isSyncingFromRemote) {
-    pushRemoteData(data).catch(() => {});
-  }
-}
-
-function updateObjectiveTierLive(objId, tierIndex, val) {
-  if (!isAdmin()) return;
-  const idx = Math.min(10, Math.max(0, Number(tierIndex) || 0));
-  const parsedGoal = parseOptionalTierGoal(val);
-  const obj = data.objectives.find(o => o.id === objId);
-  if (!obj) return;
-  if (!Array.isArray(obj.tiers)) {
-    obj.tiers = [...EMPTY_TIERS_T0_TO_T10];
-  }
-  obj.tiers[idx] = parsedGoal;
-
-  if (obj.activeTier === idx) {
-    const activeInput = document.getElementById(`activeGoalInput_${objId}`);
-    if (activeInput && activeInput.value !== String(val)) {
-      activeInput.value = val;
-    }
-  }
-  persistObjectiveTiersSilently();
-}
-
-function syncActiveGoalToTier(objId, activeTier, val) {
-  if (!isAdmin()) return;
-  const idx = Math.min(10, Math.max(0, Number(activeTier) || 0));
-  const parsedGoal = parseOptionalTierGoal(val);
-  const obj = data.objectives.find(o => o.id === objId);
-  if (!obj) return;
-  if (!Array.isArray(obj.tiers)) {
-    obj.tiers = [...EMPTY_TIERS_T0_TO_T10];
-  }
-  obj.tiers[idx] = parsedGoal;
-
-  const tierInput = document.getElementById(`tierInput_${objId}_${idx}`);
-  if (tierInput && tierInput.value !== String(val)) {
-    tierInput.value = val;
-  }
-  persistObjectiveTiersSilently();
-}
-
-function collectTiersFromDom(obj) {
-  const nextTiers = [...EMPTY_TIERS_T0_TO_T10];
-  for (let t = 0; t <= 10; t++) {
-    const el = document.getElementById(`tierInput_${obj.id}_${t}`);
-    if (el) {
-      nextTiers[t] = parseOptionalTierGoal(el.value);
-    } else if (Array.isArray(obj.tiers)) {
-      nextTiers[t] = parseOptionalTierGoal(obj.tiers[t]);
-    }
-  }
-
-  const activeGoalEl = document.getElementById(`activeGoalInput_${obj.id}`);
-  if (activeGoalEl && activeGoalEl.value.trim() !== "") {
-    const parsedActive = parseOptionalTierGoal(activeGoalEl.value);
-    if (parsedActive !== null) {
-      nextTiers[obj.activeTier] = parsedActive;
-    }
-  }
-  return nextTiers;
-}
-
-function saveObjectiveTiersNow(objId) {
-  if (!isAdmin()) return;
-  const obj = data.objectives.find(o => o.id === objId);
-  if (!obj) return;
-  obj.tiers = collectTiersFromDom(obj);
-  saveData();
-  showToast(`Cíle tierů u "${obj.title}" uloženy.`);
+  showToast("🎁 Všechny objectives označeny jako splněno!");
 }
 
 function addObjective() {
@@ -2296,7 +2217,7 @@ function addObjective() {
   }
 
   saveData();
-  showToast("Společný objective (T0–T10) přidán.");
+  showToast("Objective přidán.");
 }
 
 function removeObjective(objId) {
