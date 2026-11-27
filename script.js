@@ -364,7 +364,7 @@ async function initRealtimeSync() {
     } catch {
       // Tichý pokus na pozadí
     }
-  }, 4000);
+  }, 5000);
 }
 
 function saveSavedPants() {
@@ -1976,7 +1976,6 @@ function renderAdmin() {
               value="${goal ?? ""}"
               placeholder="Cíl"
               oninput="updateObjectiveTierLive('${escapeHtml(obj.id)}', ${tIdx}, this.value)"
-              onchange="updateObjectiveTier('${escapeHtml(obj.id)}', ${tIdx}, this.value)"
             />
           </label>
         `;
@@ -2008,9 +2007,9 @@ function renderAdmin() {
                   value="${info.tierGoal ?? ""}"
                   placeholder="Zadej cíl"
                   oninput="updateObjectiveTierLive('${escapeHtml(obj.id)}', ${info.activeTier}, this.value)"
-                  onchange="updateObjectiveTier('${escapeHtml(obj.id)}', ${info.activeTier}, this.value)"
                 />
               </label>
+              <button type="button" class="btn btn-green" onclick="saveObjectiveTiersNow('${escapeHtml(obj.id)}')">💾 Uložit cíle</button>
               <button type="button" class="btn ${info.rewardCompleted ? "btn-gold" : "btn-dark"}" onclick="toggleObjectiveRewardCompleted('${escapeHtml(obj.id)}')">
                 ${info.rewardCompleted ? "🎁 Bedna splněna (zrušit)" : "🎁 Reward bedna splněna"}
               </button>
@@ -2199,18 +2198,12 @@ function updateObjectiveTierLive(objId, tierIndex, val) {
   }
 }
 
-function updateObjectiveTier(objId, tierIndex, val) {
+function saveObjectiveTiersNow(objId) {
   if (!isAdmin()) return;
-  const idx = Math.min(10, Math.max(0, Number(tierIndex) || 0));
-  const parsedGoal = parseOptionalTierGoal(val);
   const obj = data.objectives.find(o => o.id === objId);
-  if (obj && Array.isArray(obj.tiers)) {
-    obj.tiers[idx] = parsedGoal;
-    saveData();
-    showToast(parsedGoal
-      ? `Cíl T${idx} upraven na ${parsedGoal.toLocaleString("cs-CZ")}.`
-      : `Cíl T${idx} nastaven bez hodnoty.`);
-  }
+  if (!obj) return;
+  saveData();
+  showToast(`Cíle tierů u "${obj.title}" uloženy.`);
 }
 
 function addObjective() {
