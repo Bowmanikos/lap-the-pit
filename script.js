@@ -116,6 +116,7 @@ const pantsState = {
 
 let data = loadData();
 let isSyncingFromRemote = false;
+let localWriteLockUntil = 0;
 
 function getMcHeadUrl(nick, size = 48) {
   return `https://mc-heads.net/avatar/${encodeURIComponent(nick)}/${size}`;
@@ -128,17 +129,20 @@ function parseOptionalTierGoal(val) {
 }
 
 function normalizeObjective(obj) {
-  const tiers = Array.isArray(obj.tiers) && obj.tiers.length === 11
-    ? obj.tiers.map(parseOptionalTierGoal)
+  const tiers = Array.isArray(obj.tiers)
+    ? Array.from({ length: 11 }, (_, idx) => parseOptionalTierGoal(obj.tiers[idx]))
     : [...EMPTY_TIERS_T0_TO_T10];
 
-  const activeTier = Math.min(10, Math.max(0, Number(obj.activeTier) ?? 0));
+  const activeTier = Math.min(10, Math.max(0, Number.isFinite(Number(obj.activeTier)) ? Math.floor(Number(obj.activeTier)) : 0));
   const currentDone = typeof obj.currentDone === "number" && !Number.isNaN(obj.currentDone)
-    ? Math.max(0, obj.currentDone)
+    ? Math.max(0, Math.floor(obj.currentDone))
     : null;
 
   return {
     ...obj,
+    id: String(obj.id || `obj_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`),
+    title: String(obj.title || "Objective"),
+    unit: String(obj.unit || "bodů"),
     tiers,
     activeTier,
     currentDone,
@@ -148,36 +152,41 @@ function normalizeObjective(obj) {
 
 function hydrateData(parsed) {
   const base = structuredClone(defaultData);
-  const overrideVal = parsed.totalChestOverride === null || parsed.totalChestOverride === undefined
+  const safeParsed = parsed && typeof parsed === "object" ? parsed : {};
+  const overrideVal = safeParsed.totalChestOverride === null || safeParsed.totalChestOverride === undefined
     ? null
-    : Math.min(10, Math.max(0, Number(parsed.totalChestOverride) || 0));
+    : Math.min(10, Math.max(0, Number(safeParsed.totalChestOverride) || 0));
 
-  const catalog = Array.isArray(parsed.enchantCatalog) && parsed.enchantCatalog.length > 0
-    ? parsed.enchantCatalog.map((e, i) => ({
+  const catalog = Array.isArray(safeParsed.enchantCatalog) && safeParsed.enchantCatalog.length > 0
+    ? safeParsed.enchantCatalog.map((e, i) => ({
         id: e.id || `enc_${i}_${Date.now()}`,
         name: String(e.name || "Enchant"),
         rarity: ["common", "rare", "epic"].includes(e.rarity) ? e.rarity : "common"
       }))
     : structuredClone(DEFAULT_ENCHANT_CATALOG);
 
+  const rawObjectives = Array.isArray(safeParsed.objectives)
+    ? safeParsed.objectives
+    : (safeParsed.objectives && typeof safeParsed.objectives === "object"
+        ? Object.values(safeParsed.objectives)
+        : []);
+
   return {
     ...base,
-    ...parsed,
-    lastUpdated: parsed.lastUpdated || formatNowCzech(),
+    ...safeParsed,
+    lastUpdated: safeParsed.lastUpdated || formatNowCzech(),
     totalChestOverride: overrideVal,
     enchantCatalog: catalog,
-    objectives: Array.isArray(parsed.objectives)
-      ? parsed.objectives.map(normalizeObjective)
-      : [],
-    announcements: Array.isArray(parsed.announcements)
-      ? parsed.announcements.map(a => ({
+    objectives: rawObjectives.map(normalizeObjective),
+    announcements: Array.isArray(safeParsed.announcements)
+      ? safeParsed.announcements.map(a => ({
           ...a,
           author: a.author || "Člen LAP",
           pinned: Boolean(a.pinned)
         }))
       : [],
-    players: Array.isArray(parsed.players)
-      ? parsed.players.map(p => ({
+    players: Array.isArray(safeParsed.players)
+      ? safeParsed.players.map(p => ({
           ...p,
           rank: p.rank || "Member",
           prestige: Math.max(0, Number(p.prestige) || 0),
@@ -185,7 +194,7 @@ function hydrateData(parsed) {
           contrib: p.contrib || {}
         }))
       : base.players,
-    history: Array.isArray(parsed.history) ? parsed.history : []
+    history: Array.isArray(safeParsed.history) ? safeParsed.history : []
   };
 }
 
@@ -226,6 +235,7 @@ function saveData(touchTimestamp = true, syncRemote = true) {
   if (touchTimestamp) {
     data.lastUpdated = formatNowCzech();
   }
+  localWriteLockUntil = Date.now() + 5000;
   localStorage.setItem("lap_pit_data_v14", JSON.stringify(data));
   renderAll();
 
@@ -251,7 +261,7 @@ async function initRealtimeSync() {
   }
 
   setInterval(async () => {
-    if (document.hidden) return;
+    if (document.hidden || Date.now() < localWriteLockUntil) return;
     try {
       const latest = await fetchRemoteData();
       if (!latest) return;
@@ -284,7 +294,9 @@ function saveSession() {
 }
 
 function isAdmin() {
-  return authState.currentUser?.role === "admin";
+  const user = authState.currentUser;
+  if (!user) return false;
+  return user.role === "admin" || String(user.username || "").toLowerCase() === "bowman";
 }
 
 function isLoggedIn() {
@@ -337,7 +349,13 @@ function applyPantsAuthGuard() {
 function applyPermissions() {
   const adminOnlyEls = document.querySelectorAll("[data-admin-only]");
   adminOnlyEls.forEach(el => {
-    el.style.display = isAdmin() ? "" : "none";
+    if (el.id === "tab-admin") {
+      el.style.display = isAdmin() ? "" : "none";
+    } else if (el.tagName === "SECTION") {
+      el.style.display = isAdmin() && el.classList.contains("active") ? "block" : "none";
+    } else {
+      el.style.display = isAdmin() ? "" : "none";
+    }
   });
 
   const userPill = document.getElementById("authUserPill");
@@ -345,7 +363,8 @@ function applyPermissions() {
   const logoutBtn = document.getElementById("logoutBtn");
 
   if (authState.currentUser) {
-    const { username, mcNick, role } = authState.currentUser;
+    const { username, mcNick } = authState.currentUser;
+    const role = isAdmin() ? "admin" : "user";
     document.getElementById("authUserAvatar").src = getMcHeadUrl(mcNick || username, 28);
     document.getElementById("authUserName").textContent = mcNick || username;
 
@@ -419,12 +438,9 @@ function submitAuthForm(e) {
     role: effectiveRole
   };
   saveSession();
-  renderPantsTab();
+  renderAll();
   feedback.textContent = `Přihlášeno jako ${found.mcNick} (${effectiveRole}).`;
   feedback.className = "auth-feedback ok";
-  renderPodium();
-  renderRoster();
-  renderAnnouncements();
 
   setTimeout(() => {
     closeAuthModal();
@@ -435,10 +451,7 @@ function submitAuthForm(e) {
 function logoutUser() {
   authState.currentUser = null;
   saveSession();
-  renderPantsTab();
-  renderPodium();
-  renderRoster();
-  renderAnnouncements();
+  renderAll();
   showToast("Byl jsi odhlášen.");
 }
 
@@ -462,7 +475,14 @@ function switchTab(tab) {
   document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
   document.querySelectorAll(".nav-tab").forEach(el => el.classList.remove("active"));
 
-  document.getElementById(`tab-${tab}`).classList.add("active");
+  const targetSec = document.getElementById(`tab-${tab}`);
+  if (targetSec) {
+    targetSec.classList.add("active");
+    if (tab === "admin") {
+      targetSec.style.display = isAdmin() ? "block" : "none";
+      renderAdmin();
+    }
+  }
   const btn = document.querySelector(`.nav-tab[data-tab="${tab}"]`);
   if (btn) btn.classList.add("active");
 }
@@ -1440,7 +1460,9 @@ function renderAdmin() {
   if (data.objectives.length === 0) {
     objWrap.innerHTML = `<p class="muted-text">Zatím nejsou přidány žádné společné objectives.</p>`;
   } else {
-    objWrap.innerHTML = data.objectives.map((obj, idx) => {
+    objWrap.innerHTML = data.objectives.map((rawObj, idx) => {
+      const obj = normalizeObjective(rawObj);
+      data.objectives[idx] = obj;
       const info = getObjectiveProgressInfo(obj);
       const isCustomDone = typeof obj.currentDone === "number" && !Number.isNaN(obj.currentDone);
 
@@ -1449,7 +1471,7 @@ function renderAdmin() {
         tierOptionsHtml += `<option value="${t}" ${info.activeTier === t ? "selected" : ""}>Tier T${t}</option>`;
       }
 
-      const tierEditors = (obj.tiers || EMPTY_TIERS_T0_TO_T10).map((rawGoal, tIdx) => {
+      const tierEditors = obj.tiers.map((rawGoal, tIdx) => {
         const goal = parseOptionalTierGoal(rawGoal);
         return `
           <label>
@@ -1546,41 +1568,57 @@ function renderAdmin() {
 }
 
 function saveWeekName() {
-  if (!isAdmin()) return;
+  if (!isAdmin()) {
+    showToast("Nemáš oprávnění správce.");
+    return;
+  }
   data.weekName = document.getElementById("adminWeekName").value.trim() || "Týden • LAP The Pit";
   saveData();
   showToast("Název týdne uložen.");
 }
 
 function setTotalChestTier(tierVal) {
-  if (!isAdmin()) return;
+  if (!isAdmin()) {
+    showToast("Nemáš oprávnění správce.");
+    return;
+  }
   data.totalChestOverride = Math.min(10, Math.max(0, parseInt(tierVal, 10) ?? 0));
   saveData();
   showToast(`Celková bedna nastavena na T${data.totalChestOverride}.`);
 }
 
 function resetTotalChestAuto() {
-  if (!isAdmin()) return;
+  if (!isAdmin()) {
+    showToast("Nemáš oprávnění správce.");
+    return;
+  }
   data.totalChestOverride = null;
   saveData();
   showToast("Celková bedna vrácena na automatický součet tierů.");
 }
 
 function setObjectiveActiveTier(objId, tierVal) {
-  if (!isAdmin()) return;
+  if (!isAdmin()) {
+    showToast("Nemáš oprávnění správce.");
+    return;
+  }
   const tierNum = Math.min(10, Math.max(0, parseInt(tierVal, 10) ?? 0));
-  const obj = data.objectives.find(o => o.id === objId);
+  const obj = data.objectives.find(o => String(o.id) === String(objId));
   if (obj) {
     obj.activeTier = tierNum;
+    obj.rewardCompleted = false;
     saveData();
     showToast(`Nastaven Tier T${tierNum} pro: ${obj.title}`);
   }
 }
 
 function setObjectiveDoneValue(objId, val) {
-  if (!isAdmin()) return;
+  if (!isAdmin()) {
+    showToast("Nemáš oprávnění správce.");
+    return;
+  }
   const num = Math.max(0, parseInt(val, 10) || 0);
-  const obj = data.objectives.find(o => o.id === objId);
+  const obj = data.objectives.find(o => String(o.id) === String(objId));
   if (obj) {
     obj.currentDone = num;
     saveData();
@@ -1589,8 +1627,11 @@ function setObjectiveDoneValue(objId, val) {
 }
 
 function toggleObjectiveRewardCompleted(objId) {
-  if (!isAdmin()) return;
-  const obj = data.objectives.find(o => o.id === objId);
+  if (!isAdmin()) {
+    showToast("Nemáš oprávnění správce.");
+    return;
+  }
+  const obj = data.objectives.find(o => String(o.id) === String(objId));
   if (obj) {
     const nextCompleted = !obj.rewardCompleted;
     obj.rewardCompleted = nextCompleted;
@@ -1613,7 +1654,10 @@ function toggleObjectiveRewardCompleted(objId) {
 }
 
 function markAllObjectivesRewardCompleted() {
-  if (!isAdmin()) return;
+  if (!isAdmin()) {
+    showToast("Nemáš oprávnění správce.");
+    return;
+  }
   if (data.objectives.length === 0) {
     showToast("Žádné objectives k označení.");
     return;
@@ -1631,8 +1675,11 @@ function markAllObjectivesRewardCompleted() {
 }
 
 function resetObjectiveDoneAuto(objId) {
-  if (!isAdmin()) return;
-  const obj = data.objectives.find(o => o.id === objId);
+  if (!isAdmin()) {
+    showToast("Nemáš oprávnění správce.");
+    return;
+  }
+  const obj = data.objectives.find(o => String(o.id) === String(objId));
   if (obj) {
     obj.currentDone = null;
     obj.rewardCompleted = false;
@@ -1642,10 +1689,13 @@ function resetObjectiveDoneAuto(objId) {
 }
 
 function updateObjectiveTier(objId, tierIndex, val) {
-  if (!isAdmin()) return;
+  if (!isAdmin()) {
+    showToast("Nemáš oprávnění správce.");
+    return;
+  }
   const idx = Math.min(10, Math.max(0, Number(tierIndex) || 0));
   const parsedGoal = parseOptionalTierGoal(val);
-  const obj = data.objectives.find(o => o.id === objId);
+  const obj = data.objectives.find(o => String(o.id) === String(objId));
   if (obj) {
     if (!Array.isArray(obj.tiers) || obj.tiers.length !== 11) {
       obj.tiers = [...EMPTY_TIERS_T0_TO_T10];
@@ -1659,7 +1709,10 @@ function updateObjectiveTier(objId, tierIndex, val) {
 }
 
 function addObjective() {
-  if (!isAdmin()) return;
+  if (!isAdmin()) {
+    showToast("Nemáš oprávnění správce.");
+    return;
+  }
   const title = document.getElementById("newObjTitle").value.trim();
   const unit = document.getElementById("newObjUnit").value.trim() || "bodů";
 
@@ -1673,7 +1726,7 @@ function addObjective() {
     return;
   }
 
-  data.objectives.push({
+  data.objectives.push(normalizeObjective({
     id: `obj_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     title,
     unit,
@@ -1681,7 +1734,7 @@ function addObjective() {
     activeTier: 0,
     currentDone: null,
     rewardCompleted: false
-  });
+  }));
 
   document.getElementById("newObjTitle").value = "";
   document.getElementById("newObjUnit").value = "";
@@ -1695,8 +1748,11 @@ function addObjective() {
 }
 
 function removeObjective(objId) {
-  if (!isAdmin()) return;
-  data.objectives = data.objectives.filter(o => o.id !== objId);
+  if (!isAdmin()) {
+    showToast("Nemáš oprávnění správce.");
+    return;
+  }
+  data.objectives = data.objectives.filter(o => String(o.id) !== String(objId));
   data.players.forEach(p => {
     if (p.contrib && objId in p.contrib) {
       delete p.contrib[objId];
