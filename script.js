@@ -117,6 +117,7 @@ const pantsState = {
 let data = loadData();
 let isSyncingFromRemote = false;
 let localWriteLockUntil = 0;
+let lastLocalChangeAt = Date.now();
 
 function getMcHeadUrl(nick, size = 48) {
   return `https://mc-heads.net/avatar/${encodeURIComponent(nick)}/${size}`;
@@ -235,13 +236,14 @@ function saveData(touchTimestamp = true, syncRemote = true) {
   if (touchTimestamp) {
     data.lastUpdated = formatNowCzech();
   }
-  localWriteLockUntil = Date.now() + 5000;
+  lastLocalChangeAt = Date.now();
+  localWriteLockUntil = Date.now() + 15000;
   localStorage.setItem("lap_pit_data_v14", JSON.stringify(data));
   renderAll();
 
   if (syncRemote && !isSyncingFromRemote) {
     pushRemoteData(data).catch(() => {
-      showToast("Uloženo lokálně (nepodařilo se spojit s Firebase).");
+      showToast("Uloženo lokálně (Firebase zápis selhal).");
     });
   }
 }
@@ -249,11 +251,11 @@ function saveData(touchTimestamp = true, syncRemote = true) {
 async function initRealtimeSync() {
   try {
     const remote = await fetchRemoteData();
-    if (remote) {
+    if (remote && Date.now() - lastLocalChangeAt > 5000) {
       data = remote;
       localStorage.setItem("lap_pit_data_v14", JSON.stringify(data));
       renderAll();
-    } else {
+    } else if (!remote) {
       await pushRemoteData(data);
     }
   } catch {
