@@ -115,95 +115,73 @@
       <div class="objectives-detail-grid" id="objectivesDetailGrid"></div>
     </section>
 
-    <!-- ZÁLOŽKA 4: PANTS (OTEVÍRÁNÍ BEDEN & ENCHANTOVÁNÍ T1–T3) -->
+    <!-- ZÁLOŽKA 4: PANTS -->
     <section id="tab-pants" class="tab-content">
       <div id="pantsAuthGate" class="admin-card pants-lock-card" style="display: none;">
         <div class="pants-lock-icon">🔒</div>
-        <h3>Sekce Pants je pouze pro přihlášené hráče</h3>
-        <p class="muted-text" style="margin-bottom: 14px;">
-          Pro otevírání beden a enchantování pantů na Tier 3 se nejprve přihlas svým účtem.
-        </p>
         <button type="button" class="btn btn-green" onclick="openAuthModal()">🔐 Přihlásit se</button>
       </div>
 
       <div id="pantsAuthenticatedContent">
         <div class="hero-header">
-          <h1>MYSTIC PANTS • SIMULÁTOR BEDEN</h1>
-          <p>Vyber tier bedny (Tier 8, Tier 9 nebo Tier 10), zkus štěstí na drop pantů a enchantuj až na Tier 3</p>
+          <h1>PANTS</h1>
         </div>
 
         <div class="pants-layout">
-          <!-- LEVÝ PANEL: VÝBĚR BEDNY A OTEVÍRÁNÍ -->
           <div class="admin-card" style="margin-bottom: 0;">
-            <h3>🎁 1. Výběr bedny (Tier 8 – Tier 10)</h3>
-
             <div class="field" style="margin-bottom: 12px;">
-              <label for="pantsChestTier">Vyber bednu, na které chceš zkusit štěstí</label>
+              <label for="pantsChestTier">Bedna</label>
               <select id="pantsChestTier" class="styled-select">
-                <option value="8">Tier 8 Bedna</option>
-                <option value="9">Tier 9 Bedna</option>
-                <option value="10" selected>Tier 10 Bedna</option>
+                <option value="8">Tier 8</option>
+                <option value="9">Tier 9</option>
+                <option value="10" selected>Tier 10</option>
               </select>
             </div>
 
             <div class="admin-actions" style="margin-bottom: 14px;">
-              <button type="button" class="btn btn-gold" onclick="openPantsCrate()">🎁 Vyzvednout bednu</button>
-              <button type="button" class="btn btn-dark" onclick="resetCurrentPants()">🔄 Nový pokus / Reset</button>
+              <button type="button" class="btn btn-gold" onclick="openPantsCrate()">🎁 Otevřít</button>
+              <button type="button" class="btn btn-dark" onclick="resetCurrentPants()">🔄 Reset</button>
             </div>
 
-            <div id="pantsCrateStatus" class="pants-status-box">
-              Vyber <strong>Tier 8</strong>, <strong>Tier 9</strong> nebo <strong>Tier 10</strong> bednu a klikni na <strong>🎁 Vyzvednout bednu</strong>.
-            </div>
+            <div id="pantsCrateStatus" class="pants-status-box">Tier 8–10</div>
 
             <div class="pants-stats-row" id="pantsStatsRow"></div>
           </div>
 
-          <!-- PRAVÝ PANEL: AKTIVNÍ PANTY A ENCHANTOVÁNÍ T1 -> T2 -> T3 -->
           <div class="admin-card" style="margin-bottom: 0;">
-            <h3>✨ 2. Enchantování pantů (Tier 1 → Tier 2 → Tier 3)</h3>
             <div id="activePantsWorkbench"></div>
           </div>
         </div>
 
-        <!-- PŘIDÁVÁNÍ ENCHANTŮ POUZE PRO ADMINA -->
         <div class="admin-card" id="adminEnchantCreatorCard" style="margin-top: 18px; display: none;">
-          <h3>🛠️ Přidat nový enchant (Pouze Admin)</h3>
           <div class="admin-grid">
             <div class="field">
-              <label for="newEnchantName">Název enchantu</label>
-              <input type="text" id="newEnchantName" placeholder="Např. Golden Heart" />
+              <label for="newEnchantName">Enchant</label>
+              <input type="text" id="newEnchantName" placeholder="Název" />
             </div>
             <div class="field">
-              <label for="newEnchantRarity">Rarity (barva)</label>
+              <label for="newEnchantRarity">Rarity</label>
               <select id="newEnchantRarity" class="styled-select">
-                <option value="common">Common (Šedá)</option>
-                <option value="rare">Rare (Modrá)</option>
-                <option value="epic">Epic (Fialová)</option>
+                <option value="common">Common</option>
+                <option value="rare">Rare</option>
+                <option value="epic">Epic</option>
               </select>
             </div>
           </div>
           <div class="admin-actions" style="margin-top: 6px;">
-            <button type="button" class="btn btn-green" onclick="addCustomEnchant()">➕ Přidat enchant</button>
-            <button type="button" class="btn btn-dark" onclick="resetEnchantsToDefault()">♻️ Obnovit výchozí enchanty</button>
+            <button type="button" class="btn btn-green" onclick="addCustomEnchant()">➕ Přidat</button>
+            <button type="button" class="btn btn-dark" onclick="resetEnchantsToDefault()">♻️ Reset</button>
           </div>
         </div>
 
-        <!-- SEZNAM ENCHANTŮ A RARIT -->
         <div class="admin-card" style="margin-top: 18px;">
-          <h3>📜 Přehled možných enchantů (Tier pantů 1 → 2 → 3, tier enchantu náhodný I–III)</h3>
-          <p class="muted-text" style="margin-bottom: 12px;">
-            <strong>Common (Šedá)</strong> • <strong>Rare (Modrá)</strong> • <strong>Epic (Fialová)</strong>.
-            U každého enchantu může padnout libovolný tier (<strong>I</strong>, <strong>II</strong> nebo <strong>III</strong>).
-            Enchanty <strong>Really Alive</strong> a <strong>Excess</strong> nemohou padnout společně na jedněch pantech.
-          </p>
           <div class="objectives-detail-grid" id="enchantCatalogGrid" style="margin-bottom: 0;"></div>
         </div>
 
-        <!-- ULOŽENÉ TIER 3 PANTY -->
         <div class="admin-card" style="margin-top: 18px;">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
-            <h3 style="margin-bottom: 0;">🏆 Tvoje dokončené Tier 3 Panty</h3>
-            <button type="button" class="btn btn-dark" onclick="clearSavedPants()">🗑️ Vymazat sbírku</button>
+            <h3 style="margin-bottom: 0;">Tier 3</h3>
+            <button type="button" class="btn btn-dark" onclick="clearSavedPants()">🗑️ Vymazat</button>
           </div>
           <div class="roster-grid" id="savedPantsGrid"></div>
         </div>
@@ -297,11 +275,11 @@
 
       <div class="admin-card">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
-          <h3 style="margin-bottom:0;">📊 Úprava Objectives (Tier T0–T10 • Hotovo / Z kolika)</h3>
+          <h3 style="margin-bottom:0;">📊 Úprava Objectives (Tier T0–T10 • Hotovo / Cíl)</h3>
           <button type="button" class="btn btn-gold" onclick="markAllObjectivesRewardCompleted()">🎁 Reward bedna: Vše na splněno</button>
         </div>
         <p class="muted-text" style="margin-bottom: 12px;">
-          Zvol <strong>Tier (T0–T10)</strong>, nastav <strong>Hotovo</strong>, <strong>Z kolika</strong>, nebo klikni na <strong>🎁 Reward bedna splněna</strong>.
+          Vyber <strong>Tier (T0–T10)</strong>, uprav <strong>Hotovo</strong> nebo <strong>Cíl</strong> (pro aktuální tier i jednotlivé tiery T0–T10).
         </p>
         <div id="adminObjectivesList"></div>
       </div>
@@ -323,7 +301,7 @@
         </div>
 
         <p class="muted-text" style="margin-top: 10px;">
-          Vyplň jen ty tiery, které mají hodnotu. Kterýkoliv tier (např. T8) můžeš nechat prázdný – bude bez hodnoty.
+          Vyplň cíle pro tiery T0–T10 (prázdné pole = bez hodnoty).
         </p>
         <div class="admin-grid" id="tierGoalsGrid" style="margin-top: 10px;"></div>
 
