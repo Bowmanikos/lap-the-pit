@@ -82,7 +82,7 @@
       <section class="podium-section">
         <div class="section-head">
           <h2>🏆 Top 3 podle % podílu</h2>
-          <span class="muted-text">Kliknutím na kartu otevřeš detail hráče a komentáře</span>
+          <span class="muted-text">Řazeno podle procentuálního podílu • Kliknutím otevřeš detail</span>
         </div>
         <div id="podiumGrid" class="podium-grid"></div>
       </section>
@@ -367,15 +367,35 @@
             <label for="newObjUnit">Jednotka</label>
             <input type="text" id="newObjUnit" placeholder="Výchozí: bodů" />
           </div>
+          <div class="field">
+            <label for="newObjInitialTier">Počáteční Tier (T0–T10)</label>
+            <select id="newObjInitialTier">
+              <option value="0">Tier T0</option>
+              <option value="1">Tier T1</option>
+              <option value="2">Tier T2</option>
+              <option value="3">Tier T3</option>
+              <option value="4">Tier T4</option>
+              <option value="5">Tier T5</option>
+              <option value="6">Tier T6</option>
+              <option value="7">Tier T7</option>
+              <option value="8">Tier T8</option>
+              <option value="9">Tier T9</option>
+              <option value="10">Tier T10</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="newObjInitialTarget">Cíl (Z kolika)</label>
+            <input type="number" min="1" id="newObjInitialTarget" placeholder="Např. 500" />
+          </div>
         </div>
         <div class="admin-actions">
           <button type="button" class="btn btn-green" onclick="addObjective()">+ Přidat objective</button>
         </div>
       </div>
 
-      <!-- SEZNAM AKTIVNÍCH OBJECTIVES V ADMINISTRACI -->
+      <!-- ÚPRAVA OBJECTIVES (BASIC) -->
       <div class="admin-card mt-16">
-        <h3>🎯 Úprava Objectives</h3>
+        <h3>🎯 Úprava Objectives (Název • Tier • Hotovo • Z kolika)</h3>
         <div id="adminObjectivesList" class="admin-players-list"></div>
       </div>
 
