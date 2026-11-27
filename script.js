@@ -119,6 +119,7 @@ const defaultData = {
   enchantCatalog: structuredClone(DEFAULT_ENCHANT_CATALOG),
   objectives: [],
   announcements: [],
+  polls: [],
   players: createInitialPlayers(),
   history: []
 };
@@ -196,6 +197,26 @@ function normalizePlayer(p, idx = 0) {
   };
 }
 
+function normalizePoll(poll, idx = 0) {
+  const votes = poll.votes && typeof poll.votes === "object"
+    ? Object.fromEntries(
+        Object.entries(poll.votes)
+          .filter(([nick, v]) => nick && (v === "yes" || v === "no"))
+          .map(([nick, v]) => [String(nick), v])
+      )
+    : {};
+
+  return {
+    id: poll.id || `poll_${idx}_${Date.now()}`,
+    question: String(poll.question || "Anketa"),
+    desc: String(poll.desc || ""),
+    author: String(poll.author || "Člen LAP"),
+    pinned: Boolean(poll.pinned),
+    createdAt: String(poll.createdAt || "—"),
+    votes
+  };
+}
+
 function hydrateData(parsed) {
   const base = structuredClone(defaultData);
   const overrideVal = parsed.totalChestOverride === null || parsed.totalChestOverride === undefined
@@ -226,6 +247,9 @@ function hydrateData(parsed) {
           author: String(a.author || "Člen LAP"),
           pinned: Boolean(a.pinned)
         }))
+      : [],
+    polls: Array.isArray(parsed.polls)
+      ? parsed.polls.map(normalizePoll)
       : [],
     players: Array.isArray(parsed.players)
       ? parsed.players.map(normalizePlayer)
@@ -258,10 +282,10 @@ function loadData() {
       const raw = window.location.hash.replace("#pit=", "");
       const parsed = JSON.parse(decodeBase64Utf8(raw));
       const hydrated = hydrateData(parsed);
-      localStorage.setItem("lap_pit_data_v14", JSON.stringify(hydrated));
+      localStorage.setItem("lap_pit_data_v15", JSON.stringify(hydrated));
       return hydrated;
     }
-    const saved = localStorage.getItem("lap_pit_data_v14");
+    const saved = localStorage.getItem("lap_pit_data_v15") || localStorage.getItem("lap_pit_data_v14");
     if (!saved) return structuredClone(defaultData);
     return hydrateData(JSON.parse(saved));
   } catch {
@@ -296,7 +320,7 @@ function saveData(touchTimestamp = true, syncRemote = true) {
   if (touchTimestamp) {
     data.lastUpdated = formatNowCzech();
   }
-  localStorage.setItem("lap_pit_data_v14", JSON.stringify(data));
+  localStorage.setItem("lap_pit_data_v15", JSON.stringify(data));
   renderAll();
 
   if (syncRemote && !isSyncingFromRemote) {
@@ -311,7 +335,7 @@ async function initRealtimeSync() {
     const remote = await fetchRemoteData();
     if (remote) {
       data = remote;
-      localStorage.setItem("lap_pit_data_v14", JSON.stringify(data));
+      localStorage.setItem("lap_pit_data_v15", JSON.stringify(data));
       renderAll();
     } else {
       await pushRemoteData(data);
@@ -330,7 +354,7 @@ async function initRealtimeSync() {
       if (currentSerialized !== latestSerialized) {
         isSyncingFromRemote = true;
         data = latest;
-        localStorage.setItem("lap_pit_data_v14", JSON.stringify(data));
+        localStorage.setItem("lap_pit_data_v15", JSON.stringify(data));
         renderAll();
         if (activePlayerModalId !== null) {
           openPlayerDetailModal(activePlayerModalId, true);
@@ -377,6 +401,25 @@ function applyAnnouncementAuthGuard() {
   const gate = document.getElementById("announcementLoginGate");
   const card = document.getElementById("announcementCreatorCard");
   const hint = document.getElementById("annCreatorAuthorHint");
+
+  if (!gate || !card) return;
+
+  if (isLoggedIn()) {
+    setHidden(gate, true);
+    setHidden(card, false);
+    if (hint) {
+      hint.innerHTML = `Vytváříš jako: <strong>${escapeHtml(getCurrentActorNick())}</strong>`;
+    }
+  } else {
+    setHidden(gate, false);
+    setHidden(card, true);
+  }
+}
+
+function applyPollAuthGuard() {
+  const gate = document.getElementById("pollLoginGate");
+  const card = document.getElementById("pollCreatorCard");
+  const hint = document.getElementById("pollCreatorAuthorHint");
 
   if (!gate || !card) return;
 
@@ -445,6 +488,7 @@ function applyPermissions() {
 
   applyPantsAuthGuard();
   applyAnnouncementAuthGuard();
+  applyPollAuthGuard();
 }
 
 function openAuthModal() {
@@ -501,6 +545,7 @@ function submitAuthForm(e) {
   renderPodium();
   renderRoster();
   renderAnnouncements();
+  renderPolls();
   if (activePlayerModalId !== null) {
     openPlayerDetailModal(activePlayerModalId, true);
   }
@@ -518,6 +563,7 @@ function logoutUser() {
   renderPodium();
   renderRoster();
   renderAnnouncements();
+  renderPolls();
   if (activePlayerModalId !== null) {
     openPlayerDetailModal(activePlayerModalId, true);
   }
@@ -1678,6 +1724,206 @@ function renderAnnouncements() {
   wrap.innerHTML = data.announcements.map(a => buildAnnouncementCardHtml(a, "roleInput")).join("");
 }
 
+/* POLLS (ANO / NE) */
+function addPoll() {
+  if (!isLoggedIn()) {
+    openAuthModal();
+    showToast("Pro vytvoření ankety se musíš přihlásit.");
+    return;
+  }
+
+  const question = document.getElementById("pollQuestion")?.value.trim() || "";
+  const desc = document.getElementById("pollDesc")?.value.trim() || "";
+  const pinned = Boolean(document.getElementById("pollPinOnOverview")?.checked);
+
+  if (!question) {
+    showToast("Vyplň otázku ankety.");
+    return;
+  }
+
+  const authorNick = getCurrentActorNick() || "Člen LAP";
+
+  data.polls = data.polls || [];
+  data.polls.unshift({
+    id: `poll_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    question,
+    desc,
+    author: authorNick,
+    pinned,
+    createdAt: formatNowCzech(),
+    votes: {}
+  });
+
+  document.getElementById("pollQuestion").value = "";
+  document.getElementById("pollDesc").value = "";
+  if (document.getElementById("pollPinOnOverview")) {
+    document.getElementById("pollPinOnOverview").checked = false;
+  }
+
+  saveData();
+  showToast(pinned ? "Anketa vytvořena a připnuta na hlavní stránku." : "Anketa vytvořena.");
+}
+
+function votePoll(pollId, choice) {
+  if (!isLoggedIn()) {
+    openAuthModal();
+    showToast("Pro hlasování v anketě se musíš přihlásit.");
+    return;
+  }
+  if (choice !== "yes" && choice !== "no") return;
+
+  const poll = (data.polls || []).find(p => p.id === pollId);
+  if (!poll) return;
+
+  const nick = getCurrentActorNick() || "Hráč";
+  poll.votes = poll.votes || {};
+  poll.votes[nick] = choice;
+
+  saveData();
+  showToast(choice === "yes" ? "Hlasoval jsi: Ano 👍" : "Hlasoval jsi: Ne 👎");
+}
+
+function canManagePoll(poll) {
+  if (!isLoggedIn()) return false;
+  if (isAdmin()) return true;
+  const current = getCurrentActorNick().toLowerCase();
+  return current && (poll.author || "").toLowerCase() === current;
+}
+
+function togglePinPoll(pollId) {
+  const poll = (data.polls || []).find(p => p.id === pollId);
+  if (!poll || !canManagePoll(poll)) return;
+  poll.pinned = !poll.pinned;
+  saveData();
+  showToast(poll.pinned ? "📌 Anketa připnuta na hlavní stránku." : "Anketa odepnuta z hlavní stránky.");
+}
+
+function removePoll(pollId) {
+  const poll = (data.polls || []).find(p => p.id === pollId);
+  if (!poll || !canManagePoll(poll)) return;
+  data.polls = (data.polls || []).filter(p => p.id !== pollId);
+  saveData();
+  showToast("Anketa smazána.");
+}
+
+function buildPollCardHtml(poll) {
+  const authorName = poll.author || "Člen LAP";
+  const votes = poll.votes && typeof poll.votes === "object" ? poll.votes : {};
+  const yesVoters = Object.entries(votes).filter(([, v]) => v === "yes").map(([k]) => k);
+  const noVoters = Object.entries(votes).filter(([, v]) => v === "no").map(([k]) => k);
+  const totalVotes = yesVoters.length + noVoters.length;
+
+  const yesPct = totalVotes > 0 ? Math.round((yesVoters.length / totalVotes) * 100) : 0;
+  const noPct = totalVotes > 0 ? Math.round((noVoters.length / totalVotes) * 100) : 0;
+
+  const currentNick = getCurrentActorNick();
+  const matchedKey = currentNick
+    ? Object.keys(votes).find(k => k.toLowerCase() === currentNick.toLowerCase())
+    : null;
+  const myVote = matchedKey ? votes[matchedKey] : null;
+
+  const pinBtn = canManagePoll(poll)
+    ? `<button type="button" class="btn ${poll.pinned ? "btn-gold" : "btn-dark"}" onclick="togglePinPoll('${escapeHtml(poll.id)}')">${poll.pinned ? "📌 Připnuto" : "📌 Připnout na hlavní stránku"}</button>`
+    : "";
+
+  const delBtn = canManagePoll(poll)
+    ? `<button type="button" class="btn btn-red" onclick="removePoll('${escapeHtml(poll.id)}')">Smazat</button>`
+    : "";
+
+  const yesChipsHtml = yesVoters.length > 0
+    ? yesVoters.map(nick => `<span class="signup-chip">👍 <strong>${escapeHtml(nick)}</strong></span>`).join("")
+    : `<span class="player-sub">Zatím nikdo</span>`;
+
+  const noChipsHtml = noVoters.length > 0
+    ? noVoters.map(nick => `<span class="signup-chip">👎 <strong>${escapeHtml(nick)}</strong></span>`).join("")
+    : `<span class="player-sub">Zatím nikdo</span>`;
+
+  return `
+    <div class="poll-card ${poll.pinned ? "pinned" : ""}">
+      <div class="announcement-top">
+        <div>
+          <h3>${poll.pinned ? "📌 " : ""}${escapeHtml(poll.question)}</h3>
+          <div class="announcement-author-badge">
+            <img src="${getMcHeadUrl(authorName, 20)}" alt="${escapeHtml(authorName)}" loading="lazy" onerror="this.src='${FALLBACK_AVATAR}'" />
+            <span>Vytvořil: <strong>${escapeHtml(authorName)}</strong></span>
+          </div>
+          <div class="player-sub">Vytvořeno: ${escapeHtml(poll.createdAt || "—")} • Celkem hlasů: <strong>${totalVotes}</strong></div>
+        </div>
+        <div class="admin-inputs mt-0">
+          ${pinBtn}
+          ${delBtn}
+        </div>
+      </div>
+
+      ${poll.desc ? `<p class="poll-desc">${escapeHtml(poll.desc)}</p>` : ""}
+
+      <div class="poll-vote-buttons">
+        <button type="button" class="poll-vote-btn yes ${myVote === "yes" ? "active" : ""}" onclick="votePoll('${escapeHtml(poll.id)}', 'yes')">
+          <span>👍 Ano</span>
+          <strong>${yesVoters.length} (${yesPct} %)</strong>
+        </button>
+        <button type="button" class="poll-vote-btn no ${myVote === "no" ? "active" : ""}" onclick="votePoll('${escapeHtml(poll.id)}', 'no')">
+          <span>👎 Ne</span>
+          <strong>${noVoters.length} (${noPct} %)</strong>
+        </button>
+      </div>
+
+      <div class="poll-results-grid">
+        <div class="poll-result-box">
+          <div class="obj-progress-top">
+            <span>👍 Ano</span>
+            <strong>${yesVoters.length} hlasů (${yesPct} %)</strong>
+          </div>
+          <div class="progress-track mt-6">
+            <div class="progress-bar" style="width:${yesPct}%"></div>
+          </div>
+          <div class="poll-voters-list">${yesChipsHtml}</div>
+        </div>
+
+        <div class="poll-result-box">
+          <div class="obj-progress-top">
+            <span>👎 Ne</span>
+            <strong>${noVoters.length} hlasů (${noPct} %)</strong>
+          </div>
+          <div class="progress-track mt-6">
+            <div class="progress-bar reward" style="width:${noPct}%"></div>
+          </div>
+          <div class="poll-voters-list">${noChipsHtml}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderPolls() {
+  applyPollAuthGuard();
+
+  const polls = Array.isArray(data.polls) ? data.polls : [];
+  const wrap = document.getElementById("pollsList");
+  const pinnedSection = document.getElementById("pinnedPollsSection");
+  const pinnedList = document.getElementById("pinnedPollsList");
+
+  const pinnedItems = polls.filter(p => p.pinned);
+  if (pinnedSection && pinnedList) {
+    if (pinnedItems.length > 0) {
+      setHidden(pinnedSection, false);
+      pinnedList.innerHTML = pinnedItems.map(p => buildPollCardHtml(p)).join("");
+    } else {
+      setHidden(pinnedSection, true);
+      pinnedList.innerHTML = "";
+    }
+  }
+
+  if (!wrap) return;
+
+  if (polls.length === 0) {
+    wrap.innerHTML = `<div class="admin-card"><p class="muted-text">Zatím nejsou vytvořeny žádné ankety.</p></div>`;
+    return;
+  }
+
+  wrap.innerHTML = polls.map(p => buildPollCardHtml(p)).join("");
+}
+
 /* ADMIN */
 function renderAdmin() {
   if (!isAdmin()) return;
@@ -2247,6 +2493,7 @@ function renderAll() {
   renderRoster();
   renderPantsTab();
   renderAnnouncements();
+  renderPolls();
   renderAdmin();
   renderHistory();
   applyPermissions();
