@@ -456,6 +456,7 @@ body {
   text-transform: uppercase;
 }
 
+/* Common = šedá, Rare = modrá, Epic = fialová */
 .rarity-common {
   background: rgba(156, 163, 175, 0.18);
   color: #d1d5db;
@@ -496,6 +497,12 @@ body {
   align-items: center;
   gap: 8px;
   font-size: 0.88rem;
+}
+
+.enchant-desc {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 3px;
 }
 
 /* SEARCH & SORT */
@@ -671,7 +678,7 @@ body {
   background: var(--gold);
 }
 
-/* ROSTER GRID */
+/* ROSTER GRID (SEZNAM HRÁČŮ) */
 .roster-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
@@ -865,20 +872,6 @@ body {
   gap: 12px;
   flex-wrap: wrap;
   margin-bottom: 8px;
-}
-
-.announcement-author-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--bg-inner);
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  margin-top: 6px;
 }
 
 .announcement-schedule {
