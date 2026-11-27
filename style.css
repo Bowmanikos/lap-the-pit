@@ -1,5 +1,5 @@
 :root {
-  --bg-main: #0f1117;
+  --bg-main: #090e18;
   --bg-card: #181b24;
   --bg-inner: #12151d;
   --border: #2a2f3d;
@@ -21,6 +21,7 @@
   padding: 0;
 }
 
+/* Vánoční Minecraft kostičkové pozadí + sněžení */
 body {
   position: relative;
   overflow-x: hidden;
@@ -30,13 +31,13 @@ body {
   background-color: #090e18;
   background-attachment: fixed;
   background-image:
-    radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.16), transparent 46%),
-    radial-gradient(circle at 12% 22%, rgba(239, 68, 68, 0.12), transparent 42%),
-    radial-gradient(circle at 88% 28%, rgba(56, 189, 248, 0.12), transparent 44%),
-    linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(to right, rgba(245, 158, 11, 0.045) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(245, 158, 11, 0.045) 1px, transparent 1px);
+    radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.18), transparent 46%),
+    radial-gradient(circle at 12% 22%, rgba(239, 68, 68, 0.14), transparent 42%),
+    radial-gradient(circle at 88% 28%, rgba(56, 189, 248, 0.14), transparent 44%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to right, rgba(245, 158, 11, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(245, 158, 11, 0.055) 1px, transparent 1px);
   background-size:
     100% 100%,
     100% 100%,
@@ -58,7 +59,7 @@ body::after {
 }
 
 body::before {
-  opacity: 0.42;
+  opacity: 0.45;
   background-image:
     radial-gradient(2px 2px at 24px 36px, #ffffff 95%, transparent),
     radial-gradient(2px 2px at 110px 85px, #e0f2fe 95%, transparent),
@@ -69,7 +70,7 @@ body::before {
 }
 
 body::after {
-  opacity: 0.25;
+  opacity: 0.28;
   background-image:
     radial-gradient(2px 2px at 60px 50px, #ffffff 95%, transparent),
     radial-gradient(3px 3px at 150px 120px, #bae6fd 95%, transparent),
@@ -136,7 +137,8 @@ body::after {
 
 /* TOPBAR */
 .topbar {
-  background: var(--bg-card);
+  background: rgba(24, 27, 36, 0.92);
+  backdrop-filter: blur(6px);
   border-bottom: 1px solid var(--border);
   padding: 12px 24px;
   display: flex;
@@ -298,7 +300,8 @@ body::after {
 .nav-tabs {
   display: flex;
   gap: 8px;
-  background: var(--bg-card);
+  background: rgba(24, 27, 36, 0.92);
+  backdrop-filter: blur(6px);
   border: 1px solid var(--border);
   padding: 6px;
   border-radius: 12px;
@@ -413,7 +416,7 @@ body::after {
 }
 
 .obj-summary-card {
-  background: var(--bg-card);
+  background: rgba(24, 27, 36, 0.94);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 15px 16px;
@@ -489,7 +492,7 @@ body::after {
 }
 
 .podium-card {
-  background: var(--bg-card);
+  background: rgba(24, 27, 36, 0.94);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 18px;
@@ -697,7 +700,7 @@ select {
 }
 
 .roster-card {
-  background: var(--bg-card);
+  background: rgba(24, 27, 36, 0.94);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 15px;
@@ -903,7 +906,7 @@ select {
 
 /* ANNOUNCEMENTS */
 .announcement-card {
-  background: var(--bg-card);
+  background: rgba(24, 27, 36, 0.94);
   border: 1px solid var(--border);
   border-left: 4px solid var(--accent);
   border-radius: 12px;
@@ -980,7 +983,7 @@ select {
 
 /* POLLS (ANO / NE) */
 .poll-card {
-  background: var(--bg-card);
+  background: rgba(24, 27, 36, 0.94);
   border: 1px solid var(--border);
   border-left: 4px solid var(--accent);
   border-radius: 12px;
@@ -1062,7 +1065,7 @@ select {
 
 /* ADMIN */
 .admin-card {
-  background: var(--bg-card);
+  background: rgba(24, 27, 36, 0.94);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 20px;
