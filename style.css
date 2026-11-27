@@ -1,10 +1,10 @@
 :root {
   --bg-dark: #090d16;
-  --bg-card: rgba(17, 24, 39, 0.88);
-  --bg-card-hover: rgba(24, 35, 56, 0.96);
-  --bg-soft: rgba(15, 23, 42, 0.82);
-  --border: rgba(148, 163, 184, 0.18);
-  --border-strong: rgba(148, 163, 184, 0.34);
+  --bg-card: rgba(17, 24, 39, 0.92);
+  --bg-card-hover: rgba(24, 35, 56, 0.98);
+  --bg-soft: rgba(15, 23, 42, 0.86);
+  --border: rgba(148, 163, 184, 0.2);
+  --border-strong: rgba(148, 163, 184, 0.36);
   --text: #f8fafc;
   --muted: #94a3b8;
   --green: #22c55e;
@@ -15,7 +15,7 @@
   --purple: #c084fc;
   --radius: 16px;
   --radius-sm: 10px;
-  --shadow: 0 14px 34px rgba(0, 0, 0, 0.36);
+  --shadow: 0 14px 34px rgba(0, 0, 0, 0.38);
 }
 
 * {
@@ -47,15 +47,6 @@ body {
   display: none !important;
 }
 
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-}
-
 .muted-text {
   color: var(--muted);
   font-size: 13px;
@@ -78,13 +69,15 @@ body {
 .mb-14 { margin-bottom: 14px; }
 .text-center { text-align: center; }
 
-/* HLAVIČKA */
-header {
+.card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 18px 20px;
+  padding: 18px;
   box-shadow: var(--shadow);
+}
+
+.header-card {
   backdrop-filter: blur(12px);
   margin-bottom: 22px;
 }
@@ -177,7 +170,6 @@ h3 {
   border-color: rgba(250, 204, 21, 0.45);
 }
 
-/* NAVIGACE */
 .nav-tabs {
   display: flex;
   gap: 8px;
@@ -221,7 +213,6 @@ h3 {
   display: block;
 }
 
-/* SEKCE & HLAVIČKY */
 .section-head {
   display: flex;
   justify-content: space-between;
@@ -246,17 +237,15 @@ h3 {
   flex-wrap: wrap;
 }
 
-/* INPUTY & TLAČÍTKA */
 input,
 select {
-  background: rgba(9, 13, 22, 0.85);
+  background: rgba(9, 13, 22, 0.9);
   color: var(--text);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   padding: 8px 11px;
   font-size: 13px;
   outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 input:focus,
@@ -274,7 +263,7 @@ select:focus {
   font-weight: 700;
   cursor: pointer;
   color: #fff;
-  transition: transform 0.14s ease, filter 0.14s ease, opacity 0.14s ease;
+  transition: transform 0.14s ease, filter 0.14s ease;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -306,12 +295,11 @@ select:focus {
 }
 
 .btn-dark {
-  background: rgba(30, 41, 59, 0.9);
+  background: rgba(30, 41, 59, 0.92);
   border-color: var(--border-strong);
   color: var(--text);
 }
 
-/* CELKOVÁ BEDNA */
 .total-chest-banner {
   display: flex;
   justify-content: space-between;
@@ -353,7 +341,6 @@ select:focus {
   font-size: 14px;
 }
 
-/* OBJECTIVES & RYSKA S % SPLNĚNÍ */
 .objectives-strip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -382,7 +369,7 @@ select:focus {
 }
 
 .obj-summary-card.reward-done,
-.admin-card.reward-done,
+.card.reward-done,
 .admin-obj-card.reward-done {
   border-color: rgba(250, 204, 21, 0.55);
   box-shadow: 0 12px 30px rgba(245, 158, 11, 0.14);
@@ -494,7 +481,6 @@ select:focus {
   margin-top: 6px;
 }
 
-/* PODIUM & ROSTER */
 .podium-section {
   margin-bottom: 26px;
 }
@@ -694,19 +680,10 @@ select:focus {
   min-width: 0;
 }
 
-/* ADMIN & FORMULÁŘE */
-.admin-grid {
+.two-col-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   gap: 16px;
-}
-
-.admin-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 18px;
-  box-shadow: var(--shadow);
 }
 
 .form-grid {
@@ -727,7 +704,7 @@ select:focus {
   color: var(--muted);
 }
 
-.admin-actions {
+.actions-row {
   display: flex;
   gap: 10px;
   align-items: center;
@@ -735,13 +712,13 @@ select:focus {
   margin-top: 14px;
 }
 
-.add-player-row {
+.inline-row {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.add-player-row input {
+.inline-row input {
   flex: 1;
   min-width: 180px;
 }
@@ -752,7 +729,7 @@ select:focus {
   margin: 14px 0;
 }
 
-.admin-players-list {
+.stack-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -786,15 +763,8 @@ select:focus {
   width: 118px;
 }
 
-/* OZNÁMENÍ, ANKETY & HISTORIE */
 .pinned-section {
   margin-bottom: 24px;
-}
-
-.announcements-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
 }
 
 .announcement-card,
@@ -940,7 +910,6 @@ select:focus {
   color: var(--green-bright);
 }
 
-/* PANTS */
 .pants-stats-row {
   display: flex;
   gap: 12px;
@@ -1041,7 +1010,6 @@ select:focus {
 .rarity-rare { background: rgba(56, 189, 248, 0.18); color: var(--blue); }
 .rarity-epic { background: rgba(192, 132, 252, 0.2); color: var(--purple); }
 
-/* MODÁLY, KOMENTÁŘE & TOAST */
 .modal-backdrop {
   position: fixed;
   inset: 0;
