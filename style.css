@@ -22,10 +22,85 @@
 }
 
 body {
+  position: relative;
+  overflow-x: hidden;
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-  background: var(--bg-main);
   color: var(--text);
   min-height: 100vh;
+  background-color: #090e18;
+  background-attachment: fixed;
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.16), transparent 46%),
+    radial-gradient(circle at 12% 22%, rgba(239, 68, 68, 0.12), transparent 42%),
+    radial-gradient(circle at 88% 28%, rgba(56, 189, 248, 0.12), transparent 44%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(to right, rgba(245, 158, 11, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(245, 158, 11, 0.045) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    16px 16px,
+    16px 16px,
+    64px 64px,
+    64px 64px;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: -120px 0 0 0;
+  pointer-events: none;
+  z-index: 0;
+  background-repeat: repeat;
+}
+
+body::before {
+  opacity: 0.42;
+  background-image:
+    radial-gradient(2px 2px at 24px 36px, #ffffff 95%, transparent),
+    radial-gradient(2px 2px at 110px 85px, #e0f2fe 95%, transparent),
+    radial-gradient(3px 3px at 185px 25px, #fef3c7 95%, transparent),
+    radial-gradient(2px 2px at 260px 130px, #ffffff 95%, transparent);
+  background-size: 290px 170px;
+  animation: snowDriftSlow 18s linear infinite;
+}
+
+body::after {
+  opacity: 0.25;
+  background-image:
+    radial-gradient(2px 2px at 60px 50px, #ffffff 95%, transparent),
+    radial-gradient(3px 3px at 150px 120px, #bae6fd 95%, transparent),
+    radial-gradient(2px 2px at 230px 40px, #fde68a 95%, transparent);
+  background-size: 260px 160px;
+  animation: snowDriftFast 11s linear infinite;
+}
+
+.topbar,
+.nav-wrapper,
+.main-panel {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes snowDriftSlow {
+  from {
+    transform: translateY(0) translateX(0);
+  }
+  to {
+    transform: translateY(170px) translateX(18px);
+  }
+}
+
+@keyframes snowDriftFast {
+  from {
+    transform: translateY(0) translateX(0);
+  }
+  to {
+    transform: translateY(160px) translateX(-16px);
+  }
 }
 
 .hidden {
