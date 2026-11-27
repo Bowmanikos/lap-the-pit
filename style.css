@@ -171,13 +171,18 @@ body {
   transition: 0.15s;
 }
 
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .btn-dark {
   background: #252731;
   color: var(--text);
   border: 1px solid var(--border);
 }
 
-.btn-dark:hover {
+.btn-dark:hover:not(:disabled) {
   background: #303340;
 }
 
@@ -186,7 +191,7 @@ body {
   color: #09160e;
 }
 
-.btn-green:hover {
+.btn-green:hover:not(:disabled) {
   filter: brightness(1.07);
 }
 
@@ -195,7 +200,7 @@ body {
   color: #161004;
 }
 
-.btn-gold:hover {
+.btn-gold:hover:not(:disabled) {
   filter: brightness(1.07);
 }
 
@@ -311,6 +316,82 @@ body {
   border: 1px solid var(--gold-border);
   padding: 8px 16px;
   border-radius: 10px;
+}
+
+/* OBJECTIVES SAVE BAR */
+.objectives-save-bar {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.objectives-save-bar.has-changes {
+  border-color: var(--gold-border);
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.12) 0%, rgba(25, 26, 32, 0.98) 70%);
+}
+
+.objectives-save-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.objectives-save-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dirty-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  width: fit-content;
+}
+
+.dirty-badge.saved {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+}
+
+.dirty-badge.unsaved {
+  background: var(--gold-bg);
+  color: #fbbf24;
+  border: 1px solid var(--gold-border);
+}
+
+.tier-goal-inline-input,
+.tier-select-inline {
+  background: var(--bg-inner);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 4px 7px;
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.tier-goal-inline-input {
+  width: 82px;
+  text-align: right;
+}
+
+.tier-goal-inline-input:focus,
+.tier-select-inline:focus {
+  border-color: var(--accent);
 }
 
 /* OBJECTIVES STRIP */
@@ -497,12 +578,6 @@ body {
   align-items: center;
   gap: 8px;
   font-size: 0.88rem;
-}
-
-.enchant-desc {
-  font-size: 0.78rem;
-  color: var(--muted);
-  margin-top: 3px;
 }
 
 /* SEARCH & SORT */
@@ -872,6 +947,20 @@ body {
   gap: 12px;
   flex-wrap: wrap;
   margin-bottom: 8px;
+}
+
+.announcement-author-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-inner);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-top: 6px;
 }
 
 .announcement-schedule {
