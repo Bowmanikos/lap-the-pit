@@ -1,3 +1,7 @@
+// Firebase Realtime Database
+const FIREBASE_DB_URL = "https://lap-web-22840-default-rtdb.firebaseio.com";
+const FIREBASE_PATH = "/lap_pit_guild.json";
+
 // Účty: pouze bowman (Bowmanik) má roli 'admin', všichni ostatní mají roli 'user'
 const ACCOUNTS = [
   { username: "bowman", mcNick: "Bowmanik", password: "bowman999", role: "admin" },
@@ -20,6 +24,46 @@ const ACCOUNTS = [
   { username: "trond", mcNick: "Tronndd", password: "trond117", role: "user" }
 ];
 
+const PANTS_COLORS = [
+  { id: "red", name: "Red Pants", swatchClass: "swatch-red", cardClass: "color-red" },
+  { id: "green", name: "Green Pants", swatchClass: "swatch-green", cardClass: "color-green" },
+  { id: "blue", name: "Blue Pants", swatchClass: "swatch-blue", cardClass: "color-blue" },
+  { id: "yellow", name: "Yellow Pants", swatchClass: "swatch-yellow", cardClass: "color-yellow" }
+];
+
+const DEFAULT_ENCHANT_CATALOG = [
+  // Common (šedá)
+  { id: "enc_prot", name: "Protection", rarity: "common", desc: "Snižuje příchozí poškození na pantech." },
+  { id: "enc_billy", name: "Billy", rarity: "common", desc: "Zvyšuje odměnu / bonus z poražení hráčů." },
+  { id: "enc_dia_allergy", name: "Diamond Allergy", rarity: "common", desc: "Dává bonus proti hráčům s diamantovou výbavou." },
+  { id: "enc_criket", name: "Criket", rarity: "common", desc: "Zlepšuje mobilitu a obratnost v boji." },
+  { id: "enc_pebble", name: "Pebble", rarity: "common", desc: "Přidává dodatečnou odolnost a drobné bonusy." },
+  { id: "enc_life_saver", name: "Life Saver", rarity: "common", desc: "Pomáhá zachránit tě v kritické situaci." },
+
+  // Rare (modrá)
+  { id: "enc_solitude", name: "Solitude", rarity: "rare", desc: "Snižuje poškození, když je poblíž méně nepřátel." },
+  { id: "enc_booboo", name: "Boo-Boo", rarity: "rare", desc: "Postupně léčí / regeneruje po utrženém zásahu." },
+  { id: "enc_counter", name: "Counter-Offensive", rarity: "rare", desc: "Zvyšuje poškození po obdržení rány." },
+  { id: "enc_always_ready", name: "Always Ready", rarity: "rare", desc: "Poskytuje okamžitou připravenost a bonusy do boje." },
+  { id: "enc_ring_armor", name: "Ring Armor", rarity: "rare", desc: "Snižuje poškození v určitém bojovém okruhu." },
+  { id: "enc_coverage", name: "Coverage", rarity: "rare", desc: "Zvyšuje celkové krytí a ochranu proti zásahům." },
+  { id: "enc_speedrunner", name: "Speedrunner", rarity: "rare", desc: "Zvyšuje rychlost pohybu a dynamiku hry." },
+
+  // Epic (fialová)
+  { id: "enc_not_glad", name: "\"Not\"Gladiator", rarity: "epic", desc: "Silný obranný/útočný efekt podle počtu okolních hráčů." },
+  { id: "enc_excess", name: "Excess", rarity: "epic", desc: "Posiluje léčení a efekty nad limit (nelze s Really Alive)." },
+  { id: "enc_antivirus", name: "Antivirus", rarity: "epic", desc: "Chrání před negativními efekty a debuffy." },
+  { id: "enc_david_golias", name: "David and Golias", rarity: "epic", desc: "Zvyšuje poškození proti hráčům s vysokým zdravím/výbavou." },
+  { id: "enc_really_alive", name: "Really Alive", rarity: "epic", desc: "Silný efekt přežití a regenerace (nelze s Excess)." }
+];
+
+const RARITY_WEIGHTS = {
+  common: 60,
+  rare: 30,
+  epic: 10
+};
+
+const ROMAN_TIERS = ["", "I", "II", "III"];
 const EMPTY_TIERS_T0_TO_T10 = Array(11).fill(null);
 
 function formatNowCzech() {
@@ -36,6 +80,7 @@ const defaultData = {
   weekName: "Týden #1 • LAP The Pit",
   lastUpdated: formatNowCzech(),
   totalChestOverride: null,
+  enchantCatalog: structuredClone(DEFAULT_ENCHANT_CATALOG),
   objectives: [],
   announcements: [],
   players: [
@@ -65,7 +110,15 @@ const authState = {
   currentUser: JSON.parse(sessionStorage.getItem("lap_pit_session")) || null
 };
 
+const pantsState = {
+  cratesOpened: 0,
+  pantsDroppedCount: 0,
+  currentPants: null,
+  savedPants: JSON.parse(localStorage.getItem("lap_pit_saved_pants_v1")) || []
+};
+
 let data = loadData();
+let isSyncingFromRemote = false;
 
 function getMcHeadUrl(nick, size = 48) {
   return `https://mc-heads.net/avatar/${encodeURIComponent(nick)}/${size}`;
@@ -102,11 +155,21 @@ function hydrateData(parsed) {
     ? null
     : Math.min(10, Math.max(0, Number(parsed.totalChestOverride) || 0));
 
+  const catalog = Array.isArray(parsed.enchantCatalog) && parsed.enchantCatalog.length > 0
+    ? parsed.enchantCatalog.map((e, i) => ({
+        id: e.id || `enc_${i}_${Date.now()}`,
+        name: String(e.name || "Enchant"),
+        rarity: ["common", "rare", "epic"].includes(e.rarity) ? e.rarity : "common",
+        desc: String(e.desc || "")
+      }))
+    : structuredClone(DEFAULT_ENCHANT_CATALOG);
+
   return {
     ...base,
     ...parsed,
     lastUpdated: parsed.lastUpdated || formatNowCzech(),
     totalChestOverride: overrideVal,
+    enchantCatalog: catalog,
     objectives: Array.isArray(parsed.objectives)
       ? parsed.objectives.map(normalizeObjective)
       : [],
@@ -143,12 +206,72 @@ function loadData() {
   }
 }
 
-function saveData(touchTimestamp = true) {
+async function fetchRemoteData() {
+  const res = await fetch(`${FIREBASE_DB_URL}${FIREBASE_PATH}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Chyba při čtení databáze");
+  const json = await res.json();
+  return json ? hydrateData(json) : null;
+}
+
+async function pushRemoteData(payload) {
+  const res = await fetch(`${FIREBASE_DB_URL}${FIREBASE_PATH}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error("Chyba při zápisu do databáze");
+}
+
+function saveData(touchTimestamp = true, syncRemote = true) {
   if (touchTimestamp) {
     data.lastUpdated = formatNowCzech();
   }
   localStorage.setItem("lap_pit_data_v14", JSON.stringify(data));
   renderAll();
+
+  if (syncRemote && !isSyncingFromRemote) {
+    pushRemoteData(data).catch(() => {
+      showToast("Uloženo lokálně (nepodařilo se spojit s Firebase).");
+    });
+  }
+}
+
+async function initRealtimeSync() {
+  try {
+    const remote = await fetchRemoteData();
+    if (remote) {
+      data = remote;
+      localStorage.setItem("lap_pit_data_v14", JSON.stringify(data));
+      renderAll();
+    } else {
+      await pushRemoteData(data);
+    }
+  } catch {
+    // Pokud není připojení, zůstanou lokální data
+  }
+
+  setInterval(async () => {
+    if (document.hidden) return;
+    try {
+      const latest = await fetchRemoteData();
+      if (!latest) return;
+      const currentSerialized = JSON.stringify(data);
+      const latestSerialized = JSON.stringify(latest);
+      if (currentSerialized !== latestSerialized) {
+        isSyncingFromRemote = true;
+        data = latest;
+        localStorage.setItem("lap_pit_data_v14", JSON.stringify(data));
+        renderAll();
+        isSyncingFromRemote = false;
+      }
+    } catch {
+      // Tichý pokus na pozadí
+    }
+  }, 4000);
+}
+
+function saveSavedPants() {
+  localStorage.setItem("lap_pit_saved_pants_v1", JSON.stringify(pantsState.savedPants));
 }
 
 function saveSession() {
@@ -162,6 +285,30 @@ function saveSession() {
 
 function isAdmin() {
   return authState.currentUser?.role === "admin";
+}
+
+function isLoggedIn() {
+  return Boolean(authState.currentUser);
+}
+
+function applyPantsAuthGuard() {
+  const gate = document.getElementById("pantsAuthGate");
+  const content = document.getElementById("pantsAuthenticatedContent");
+  const adminEnchantCard = document.getElementById("adminEnchantCreatorCard");
+
+  if (adminEnchantCard) {
+    adminEnchantCard.style.display = isAdmin() ? "" : "none";
+  }
+
+  if (!gate || !content) return;
+
+  if (isLoggedIn()) {
+    gate.style.display = "none";
+    content.style.display = "";
+  } else {
+    gate.style.display = "";
+    content.style.display = "none";
+  }
 }
 
 function applyPermissions() {
@@ -196,6 +343,8 @@ function applyPermissions() {
   if (!isAdmin() && adminTab?.classList.contains("active")) {
     switchTab("overview");
   }
+
+  applyPantsAuthGuard();
 }
 
 function openAuthModal() {
@@ -238,7 +387,6 @@ function submitAuthForm(e) {
     return;
   }
 
-  // Pojistka: pouze bowman / Bowmanik může mít roli admin
   const effectiveRole = found.username.toLowerCase() === "bowman" ? "admin" : "user";
 
   authState.currentUser = {
@@ -247,6 +395,7 @@ function submitAuthForm(e) {
     role: effectiveRole
   };
   saveSession();
+  renderPantsTab();
   feedback.textContent = `Přihlášeno jako ${found.mcNick} (${effectiveRole}).`;
   feedback.className = "auth-feedback ok";
   renderPodium();
@@ -262,6 +411,7 @@ function submitAuthForm(e) {
 function logoutUser() {
   authState.currentUser = null;
   saveSession();
+  renderPantsTab();
   renderPodium();
   renderRoster();
   renderAnnouncements();
@@ -274,6 +424,18 @@ function switchTab(tab) {
     return;
   }
 
+  if (tab === "pants" && !isLoggedIn()) {
+    applyPantsAuthGuard();
+    document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
+    document.querySelectorAll(".nav-tab").forEach(el => el.classList.remove("active"));
+    document.getElementById("tab-pants").classList.add("active");
+    const btn = document.querySelector('.nav-tab[data-tab="pants"]');
+    if (btn) btn.classList.add("active");
+    openAuthModal();
+    showToast("Pro vstup do sekce Pants se musíš přihlásit.");
+    return;
+  }
+
   document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
   document.querySelectorAll(".nav-tab").forEach(el => el.classList.remove("active"));
 
@@ -282,6 +444,341 @@ function switchTab(tab) {
   if (btn) btn.classList.add("active");
 }
 
+/* PANTS LOGIKA */
+function getColorObj(colorId) {
+  return PANTS_COLORS.find(c => c.id === colorId) || PANTS_COLORS[0];
+}
+
+function pickRandomPantsColor() {
+  return PANTS_COLORS[Math.floor(Math.random() * PANTS_COLORS.length)];
+}
+
+function openPantsCrate() {
+  if (!isLoggedIn()) {
+    openAuthModal();
+    showToast("Nejprve se přihlas.");
+    return;
+  }
+
+  const chestTier = Number(document.getElementById("pantsChestTier")?.value || 10);
+  const chanceByTier = { 8: 6, 9: 8, 10: 10 };
+  const chance = chanceByTier[chestTier] ?? 8;
+
+  pantsState.cratesOpened += 1;
+  const hit = (Math.random() * 100) < chance;
+  const statusEl = document.getElementById("pantsCrateStatus");
+
+  if (hit) {
+    const droppedColor = pickRandomPantsColor();
+    pantsState.pantsDroppedCount += 1;
+    pantsState.currentPants = {
+      id: `pants_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      colorId: droppedColor.id,
+      tier: 0,
+      enchants: [],
+      fromChest: `Tier ${chestTier} Bedna`
+    };
+    const msg = `Gratuluju získal si ${droppedColor.name}`;
+    if (statusEl) {
+      statusEl.className = "pants-status-box hit";
+      statusEl.innerHTML = `🎉 <strong>${msg}!</strong> Teď je můžeš enchantovat přes Tier 1 → Tier 2 → Tier 3.`;
+    }
+    showToast(`🎉 ${msg}!`);
+  } else {
+    const missMsg = "Nevadi, zkus to priste";
+    if (statusEl) {
+      statusEl.className = "pants-status-box miss";
+      statusEl.innerHTML = `❌ <strong>${missMsg}</strong>`;
+    }
+    showToast(missMsg);
+  }
+
+  renderPantsTab();
+}
+
+function resetCurrentPants() {
+  if (!isLoggedIn()) {
+    openAuthModal();
+    return;
+  }
+  pantsState.currentPants = null;
+  const statusEl = document.getElementById("pantsCrateStatus");
+  if (statusEl) {
+    statusEl.className = "pants-status-box";
+    statusEl.innerHTML = `Vyber <strong>Tier 8</strong>, <strong>Tier 9</strong> nebo <strong>Tier 10</strong> bednu a klikni na <strong>🎁 Vyzvednout bednu</strong>.`;
+  }
+  renderPantsTab();
+}
+
+function pickRandomRarity() {
+  const total = RARITY_WEIGHTS.common + RARITY_WEIGHTS.rare + RARITY_WEIGHTS.epic;
+  let r = Math.random() * total;
+  if (r < RARITY_WEIGHTS.common) return "common";
+  r -= RARITY_WEIGHTS.common;
+  if (r < RARITY_WEIGHTS.rare) return "rare";
+  return "epic";
+}
+
+function pickRandomEnchantLevel() {
+  return Math.floor(Math.random() * 3) + 1;
+}
+
+function rollNextEnchant(currentEnchants) {
+  const catalog = data.enchantCatalog || [];
+  if (catalog.length === 0) return null;
+
+  const existingNames = new Set(currentEnchants.map(e => e.name));
+  const hasReallyAlive = existingNames.has("Really Alive");
+  const hasExcess = existingNames.has("Excess");
+
+  const isForbiddenTogether = (candidateName) => {
+    if (candidateName === "Really Alive" && hasExcess) return true;
+    if (candidateName === "Excess" && hasReallyAlive) return true;
+    return false;
+  };
+
+  let pool = [];
+  for (let attempt = 0; attempt < 25; attempt++) {
+    const rarity = pickRandomRarity();
+    const candidates = catalog.filter(
+      e => e.rarity === rarity && !existingNames.has(e.name) && !isForbiddenTogether(e.name)
+    );
+    if (candidates.length > 0) {
+      pool = candidates;
+      break;
+    }
+  }
+
+  if (pool.length === 0) {
+    pool = catalog.filter(
+      e => !existingNames.has(e.name) && !isForbiddenTogether(e.name)
+    );
+  }
+
+  if (pool.length === 0) {
+    pool = catalog.filter(e => !isForbiddenTogether(e.name));
+  }
+
+  if (pool.length === 0) return null;
+
+  const chosen = pool[Math.floor(Math.random() * pool.length)];
+  const rolledEnchantTier = pickRandomEnchantLevel();
+
+  return {
+    name: chosen.name,
+    rarity: chosen.rarity,
+    level: rolledEnchantTier,
+    desc: chosen.desc
+  };
+}
+
+function enchantCurrentPantsStep() {
+  if (!isLoggedIn()) {
+    openAuthModal();
+    return;
+  }
+
+  const p = pantsState.currentPants;
+  if (!p || p.tier >= 3) return;
+
+  const nextPantsTier = p.tier + 1;
+  const rolled = rollNextEnchant(p.enchants);
+  if (!rolled) {
+    showToast("V katalogu nejsou dostupné žádné enchanty.");
+    return;
+  }
+
+  p.tier = nextPantsTier;
+  p.enchants.push(rolled);
+
+  if (p.tier === 3) {
+    pantsState.savedPants.unshift({
+      ...structuredClone(p),
+      owner: authState.currentUser?.mcNick || authState.currentUser?.username || "Hráč",
+      createdAt: formatNowCzech()
+    });
+    saveSavedPants();
+    showToast(`✨ Dokončeny Tier 3 ${getColorObj(p.colorId).name}!`);
+  } else {
+    showToast(`✨ Enchantnuto na Tier ${p.tier} (${rolled.name} ${ROMAN_TIERS[rolled.level]})`);
+  }
+
+  renderPantsTab();
+}
+
+function addCustomEnchant() {
+  if (!isAdmin()) return;
+  const name = document.getElementById("newEnchantName").value.trim();
+  const rarity = document.getElementById("newEnchantRarity").value;
+  const desc = document.getElementById("newEnchantDesc").value.trim() || "Vlastní enchant přidaný adminem.";
+
+  if (!name) {
+    showToast("Vyplň název enchantu.");
+    return;
+  }
+
+  data.enchantCatalog.push({
+    id: `enc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    name,
+    rarity: ["common", "rare", "epic"].includes(rarity) ? rarity : "common",
+    desc
+  });
+
+  document.getElementById("newEnchantName").value = "";
+  document.getElementById("newEnchantDesc").value = "";
+  saveData();
+  showToast(`Enchant "${name}" přidán.`);
+}
+
+function removeCustomEnchant(encId) {
+  if (!isAdmin()) return;
+  data.enchantCatalog = data.enchantCatalog.filter(e => e.id !== encId);
+  saveData();
+  showToast("Enchant odebrán.");
+}
+
+function resetEnchantsToDefault() {
+  if (!isAdmin()) return;
+  if (!confirm("Obnovit výchozí seznam enchantů?")) return;
+  data.enchantCatalog = structuredClone(DEFAULT_ENCHANT_CATALOG);
+  saveData();
+  showToast("Výchozí enchanty obnoveny.");
+}
+
+function clearSavedPants() {
+  if (!isLoggedIn()) return;
+  pantsState.savedPants = [];
+  saveSavedPants();
+  showToast("Sbírka Tier 3 pantů vymazána.");
+  renderPantsTab();
+}
+
+function renderPantsTab() {
+  applyPantsAuthGuard();
+  if (!isLoggedIn()) return;
+
+  const statsRow = document.getElementById("pantsStatsRow");
+  if (statsRow) {
+    statsRow.innerHTML = `
+      <span>Otevřené bedny: <strong>${pantsState.cratesOpened}</strong></span>
+      <span>Padlé panty: <strong>${pantsState.pantsDroppedCount}</strong></span>
+      <span>Dokončené T3: <strong>${pantsState.savedPants.length}</strong></span>
+    `;
+  }
+
+  const workbench = document.getElementById("activePantsWorkbench");
+  if (workbench) {
+    const p = pantsState.currentPants;
+    if (!p) {
+      workbench.innerHTML = `
+        <div class="pants-item-card">
+          <div class="player-name">Čeká na drop pantů z bedny</div>
+          <p class="muted-text" style="margin-top:6px;">
+            Jakmile ti z bedny padnou náhodné panty (<strong>Red</strong>, <strong>Green</strong>, <strong>Blue</strong> nebo <strong>Yellow</strong>), můžeš je zde postupně enchantovat přes <strong>Tier 1 → Tier 2 → Tier 3</strong>. U každého enchantu může padnout libovolný tier (<strong>I</strong>, <strong>II</strong> nebo <strong>III</strong>).
+          </p>
+        </div>
+      `;
+    } else {
+      const col = getColorObj(p.colorId);
+      const tierLabel = p.tier === 0 ? "Čisté panty (Tier 0)" : `Tier ${p.tier} Panty`;
+      const enchantsHtml = p.enchants.length
+        ? p.enchants.map(e => `
+            <div class="enchant-line border-${e.rarity}">
+              <div class="enchant-line-top">
+                <strong class="enchant-name-${e.rarity}">${e.name} ${ROMAN_TIERS[e.level]}</strong>
+                <span class="rarity-pill rarity-${e.rarity}">${e.rarity}</span>
+              </div>
+              <div class="enchant-desc">${e.desc}</div>
+            </div>
+          `).join("")
+        : `<p class="muted-text" style="margin-top:10px;">Zatím žádné enchanty. Klikni pro enchantnutí na <strong>Tier 1</strong>.</p>`;
+
+      const actionBtnHtml = p.tier < 3
+        ? `<button type="button" class="btn btn-green" onclick="enchantCurrentPantsStep()">✨ Enchantnout na Tier ${p.tier + 1}</button>`
+        : `<div class="completion-box" style="margin-top:12px; margin-bottom:0;"><span>Stav itemu</span><strong>✅ HOTOVO • TIER 3 PANTY</strong></div>`;
+
+      workbench.innerHTML = `
+        <div class="pants-item-card ${col.cardClass}">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+            <div>
+              <span class="pants-swatch ${col.swatchClass}" style="vertical-align:middle; margin-right:6px;"></span>
+              <strong style="font-size:1.05rem;">${col.name}</strong>
+              <span class="player-sub">• ${tierLabel}</span>
+            </div>
+            <span class="obj-badge">${p.fromChest || "Bedna"}</span>
+          </div>
+          ${enchantsHtml}
+          <div class="admin-actions">
+            ${actionBtnHtml}
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  const catalogGrid = document.getElementById("enchantCatalogGrid");
+  if (catalogGrid) {
+    const catalog = data.enchantCatalog || [];
+    const byRarity = [
+      { key: "common", title: "⚪ Common Enchanty (Šedá • 60 %)", items: catalog.filter(e => e.rarity === "common") },
+      { key: "rare", title: "🔵 Rare Enchanty (Modrá • 30 %)", items: catalog.filter(e => e.rarity === "rare") },
+      { key: "epic", title: "🟣 Epic Enchanty (Fialová • 10 %)", items: catalog.filter(e => e.rarity === "epic") }
+    ];
+
+    catalogGrid.innerHTML = byRarity.map(group => `
+      <div class="pants-item-card">
+        <h3 style="margin-bottom:8px;">${group.title}</h3>
+        ${group.items.length === 0 ? `<p class="muted-text">Žádné enchanty v této kategorii.</p>` : ""}
+        ${group.items.map(it => `
+          <div class="enchant-line border-${it.rarity}">
+            <div class="enchant-line-top">
+              <strong class="enchant-name-${it.rarity}">${it.name}</strong>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span class="muted-text" style="font-size:0.76rem;">Tier I–III (náhodně)</span>
+                ${isAdmin() ? `<button type="button" class="btn btn-red" style="padding:2px 7px; font-size:0.72rem;" onclick="removeCustomEnchant('${it.id}')">✕</button>` : ""}
+              </div>
+            </div>
+            <div class="enchant-desc">${it.desc}</div>
+          </div>
+        `).join("")}
+      </div>
+    `).join("");
+  }
+
+  const savedGrid = document.getElementById("savedPantsGrid");
+  if (savedGrid) {
+    if (pantsState.savedPants.length === 0) {
+      savedGrid.innerHTML = `<p class="muted-text">Zatím nemáš dokončené žádné Tier 3 panty.</p>`;
+    } else {
+      savedGrid.innerHTML = pantsState.savedPants.map(item => {
+        const col = getColorObj(item.colorId);
+        return `
+          <div class="pants-item-card ${col.cardClass}">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;">
+              <div>
+                <span class="pants-swatch ${col.swatchClass}" style="vertical-align:middle; margin-right:6px;"></span>
+                <strong>${col.name} • Tier 3</strong>
+              </div>
+              <span class="obj-badge reward">${item.owner || "Hráč"}</span>
+            </div>
+            <div class="player-sub" style="margin-top:0; margin-bottom:8px;">${item.createdAt || ""}</div>
+            ${item.enchants.map(e => `
+              <div class="enchant-line border-${e.rarity}">
+                <div class="enchant-line-top">
+                  <strong class="enchant-name-${e.rarity}">${e.name} ${ROMAN_TIERS[e.level]}</strong>
+                  <span class="rarity-pill rarity-${e.rarity}">${e.rarity}</span>
+                </div>
+                <div class="enchant-desc">${e.desc}</div>
+              </div>
+            `).join("")}
+          </div>
+        `;
+      }).join("");
+    }
+  }
+}
+
+/* OBJECTIVES & PODIUM & ROSTER */
 function renderTierGoalInputs() {
   const grid = document.getElementById("tierGoalsGrid");
   if (!grid || grid.children.length > 0) return;
@@ -753,6 +1250,7 @@ function renderRoster() {
   }).join("");
 }
 
+/* ANNOUNCEMENTS */
 function addAnnouncement() {
   if (!isAdmin()) return;
   const title = document.getElementById("annTitle").value.trim();
@@ -799,7 +1297,7 @@ function togglePinAnnouncement(annId) {
 }
 
 function joinAnnouncement(annId, inputPrefix = "roleInput") {
-  if (!authState.currentUser) {
+  if (!isLoggedIn()) {
     openAuthModal();
     showToast("Přihlas se, abys mohl zapsat co budeš dělat.");
     return;
@@ -901,6 +1399,7 @@ function renderAnnouncements() {
   wrap.innerHTML = data.announcements.map(a => buildAnnouncementCardHtml(a, "roleInput")).join("");
 }
 
+/* ADMIN */
 function renderAdmin() {
   if (!isAdmin()) return;
 
@@ -1425,6 +1924,7 @@ function renderAll() {
   renderObjectives();
   renderPodium();
   renderRoster();
+  renderPantsTab();
   renderAnnouncements();
   renderAdmin();
   renderHistory();
@@ -1432,3 +1932,4 @@ function renderAll() {
 }
 
 renderAll();
+initRealtimeSync();
