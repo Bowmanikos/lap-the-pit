@@ -2,6 +2,7 @@
 const FIREBASE_DB_URL = "https://lap-web-22840-default-rtdb.firebaseio.com";
 const FIREBASE_PATH = "/lap_pit_guild.json";
 
+// Účty: pouze bowman (Bowmanik) má roli 'admin', všichni ostatní mají roli 'user'
 const ACCOUNTS = [
   { username: "bowman", mcNick: "Bowmanik", password: "bowman999", role: "admin" },
   { username: "brumik", mcNick: "Ouwkk", password: "brumik101", role: "user" },
@@ -24,34 +25,44 @@ const ACCOUNTS = [
 ];
 
 const PANTS_COLORS = [
-  { id: "red", name: "Red", swatchClass: "swatch-red", cardClass: "color-red" },
-  { id: "green", name: "Green", swatchClass: "swatch-green", cardClass: "color-green" },
-  { id: "blue", name: "Blue", swatchClass: "swatch-blue", cardClass: "color-blue" },
-  { id: "yellow", name: "Yellow", swatchClass: "swatch-yellow", cardClass: "color-yellow" }
+  { id: "red", name: "Red Pants", swatchClass: "swatch-red", cardClass: "color-red" },
+  { id: "green", name: "Green Pants", swatchClass: "swatch-green", cardClass: "color-green" },
+  { id: "blue", name: "Blue Pants", swatchClass: "swatch-blue", cardClass: "color-blue" },
+  { id: "yellow", name: "Yellow Pants", swatchClass: "swatch-yellow", cardClass: "color-yellow" }
 ];
 
 const DEFAULT_ENCHANT_CATALOG = [
-  { id: "enc_prot", name: "Protection", rarity: "common" },
-  { id: "enc_billy", name: "Billy", rarity: "common" },
-  { id: "enc_dia_allergy", name: "Diamond Allergy", rarity: "common" },
-  { id: "enc_criket", name: "Criket", rarity: "common" },
-  { id: "enc_pebble", name: "Pebble", rarity: "common" },
-  { id: "enc_life_saver", name: "Life Saver", rarity: "common" },
-  { id: "enc_solitude", name: "Solitude", rarity: "rare" },
-  { id: "enc_booboo", name: "Boo-Boo", rarity: "rare" },
-  { id: "enc_counter", name: "Counter-Offensive", rarity: "rare" },
-  { id: "enc_always_ready", name: "Always Ready", rarity: "rare" },
-  { id: "enc_ring_armor", name: "Ring Armor", rarity: "rare" },
-  { id: "enc_coverage", name: "Coverage", rarity: "rare" },
-  { id: "enc_speedrunner", name: "Speedrunner", rarity: "rare" },
-  { id: "enc_not_glad", name: "\"Not\"Gladiator", rarity: "epic" },
-  { id: "enc_excess", name: "Excess", rarity: "epic" },
-  { id: "enc_antivirus", name: "Antivirus", rarity: "epic" },
-  { id: "enc_david_golias", name: "David and Golias", rarity: "epic" },
-  { id: "enc_really_alive", name: "Really Alive", rarity: "epic" }
+  // Common (šedá)
+  { id: "enc_prot", name: "Protection", rarity: "common", desc: "Snižuje příchozí poškození na pantech." },
+  { id: "enc_billy", name: "Billy", rarity: "common", desc: "Zvyšuje odměnu / bonus z poražení hráčů." },
+  { id: "enc_dia_allergy", name: "Diamond Allergy", rarity: "common", desc: "Dává bonus proti hráčům s diamantovou výbavou." },
+  { id: "enc_criket", name: "Criket", rarity: "common", desc: "Zlepšuje mobilitu a obratnost v boji." },
+  { id: "enc_pebble", name: "Pebble", rarity: "common", desc: "Přidává dodatečnou odolnost a drobné bonusy." },
+  { id: "enc_life_saver", name: "Life Saver", rarity: "common", desc: "Pomáhá zachránit tě v kritické situaci." },
+
+  // Rare (modrá)
+  { id: "enc_solitude", name: "Solitude", rarity: "rare", desc: "Snižuje poškození, když je poblíž méně nepřátel." },
+  { id: "enc_booboo", name: "Boo-Boo", rarity: "rare", desc: "Postupně léčí / regeneruje po utrženém zásahu." },
+  { id: "enc_counter", name: "Counter-Offensive", rarity: "rare", desc: "Zvyšuje poškození po obdržení rány." },
+  { id: "enc_always_ready", name: "Always Ready", rarity: "rare", desc: "Poskytuje okamžitou připravenost a bonusy do boje." },
+  { id: "enc_ring_armor", name: "Ring Armor", rarity: "rare", desc: "Snižuje poškození v určitém bojovém okruhu." },
+  { id: "enc_coverage", name: "Coverage", rarity: "rare", desc: "Zvyšuje celkové krytí a ochranu proti zásahům." },
+  { id: "enc_speedrunner", name: "Speedrunner", rarity: "rare", desc: "Zvyšuje rychlost pohybu a dynamiku hry." },
+
+  // Epic (fialová)
+  { id: "enc_not_glad", name: "\"Not\"Gladiator", rarity: "epic", desc: "Silný obranný/útočný efekt podle počtu okolních hráčů." },
+  { id: "enc_excess", name: "Excess", rarity: "epic", desc: "Posiluje léčení a efekty nad limit (nelze s Really Alive)." },
+  { id: "enc_antivirus", name: "Antivirus", rarity: "epic", desc: "Chrání před negativními efekty a debuffy." },
+  { id: "enc_david_golias", name: "David and Golias", rarity: "epic", desc: "Zvyšuje poškození proti hráčům s vysokým zdravím/výbavou." },
+  { id: "enc_really_alive", name: "Really Alive", rarity: "epic", desc: "Silný efekt přežití a regenerace (nelze s Excess)." }
 ];
 
-const RARITY_WEIGHTS = { common: 60, rare: 30, epic: 10 };
+const RARITY_WEIGHTS = {
+  common: 60,
+  rare: 30,
+  epic: 10
+};
+
 const ROMAN_TIERS = ["", "I", "II", "III"];
 const EMPTY_TIERS_T0_TO_T10 = Array(11).fill(null);
 
@@ -65,15 +76,11 @@ function formatNowCzech() {
   });
 }
 
-function deepCopy(obj) {
-  return JSON.parse(JSON.stringify(obj));
-}
-
 const defaultData = {
   weekName: "Týden #1 • LAP The Pit",
   lastUpdated: formatNowCzech(),
   totalChestOverride: null,
-  enchantCatalog: deepCopy(DEFAULT_ENCHANT_CATALOG),
+  enchantCatalog: structuredClone(DEFAULT_ENCHANT_CATALOG),
   objectives: [],
   announcements: [],
   players: [
@@ -100,15 +107,18 @@ const defaultData = {
 };
 
 const authState = {
-  currentUser: JSON.parse(sessionStorage.getItem("lap_pit_session") || "null")
+  currentUser: JSON.parse(sessionStorage.getItem("lap_pit_session")) || null
 };
 
 const pantsState = {
   cratesOpened: 0,
   pantsDroppedCount: 0,
   currentPants: null,
-  savedPants: JSON.parse(localStorage.getItem("lap_pit_saved_pants_v1") || "[]")
+  savedPants: JSON.parse(localStorage.getItem("lap_pit_saved_pants_v1")) || []
 };
+
+let data = loadData();
+let isSyncingFromRemote = false;
 
 function getMcHeadUrl(nick, size = 48) {
   return `https://mc-heads.net/avatar/${encodeURIComponent(nick)}/${size}`;
@@ -121,64 +131,87 @@ function parseOptionalTierGoal(val) {
 }
 
 function normalizeObjective(obj) {
-  const o = obj && typeof obj === "object" ? obj : {};
-  const rawTiers = Array.isArray(o.tiers) ? o.tiers : EMPTY_TIERS_T0_TO_T10;
-  const tiers = Array.from({ length: 11 }, (_, idx) => parseOptionalTierGoal(rawTiers[idx]));
-  const parsedTier = Number(o.activeTier);
-  const activeTier = Number.isFinite(parsedTier) ? Math.min(10, Math.max(0, Math.floor(parsedTier))) : 0;
-  const hasDone = o.currentDone !== null && o.currentDone !== undefined && String(o.currentDone).trim() !== "" && Number.isFinite(Number(o.currentDone));
-  const currentDone = hasDone ? Math.max(0, Math.floor(Number(o.currentDone))) : null;
+  const tiers = Array.isArray(obj.tiers) && obj.tiers.length === 11
+    ? obj.tiers.map(parseOptionalTierGoal)
+    : [...EMPTY_TIERS_T0_TO_T10];
+
+  const activeTier = Math.min(10, Math.max(0, Number(obj.activeTier) ?? 0));
+  const currentDone = typeof obj.currentDone === "number" && !Number.isNaN(obj.currentDone)
+    ? Math.max(0, obj.currentDone)
+    : null;
 
   return {
-    ...o,
-    id: String(o.id || `obj_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`),
-    title: String(o.title || "Objective"),
-    unit: String(o.unit || "bodů"),
+    ...obj,
     tiers,
     activeTier,
     currentDone,
-    rewardCompleted: Boolean(o.rewardCompleted)
+    rewardCompleted: Boolean(obj.rewardCompleted)
   };
 }
 
 function hydrateData(parsed) {
-  const base = deepCopy(defaultData);
-  const safe = parsed && typeof parsed === "object" ? parsed : {};
-  const overrideVal = safe.totalChestOverride === null || safe.totalChestOverride === undefined
+  const base = structuredClone(defaultData);
+  const overrideVal = parsed.totalChestOverride === null || parsed.totalChestOverride === undefined
     ? null
-    : Math.min(10, Math.max(0, Number(safe.totalChestOverride) || 0));
+    : Math.min(10, Math.max(0, Number(parsed.totalChestOverride) || 0));
 
-  const catalog = Array.isArray(safe.enchantCatalog) && safe.enchantCatalog.length > 0
-    ? safe.enchantCatalog
-    : deepCopy(DEFAULT_ENCHANT_CATALOG);
-
-  const rawObjectives = Array.isArray(safe.objectives) ? safe.objectives : [];
+  const catalog = Array.isArray(parsed.enchantCatalog) && parsed.enchantCatalog.length > 0
+    ? parsed.enchantCatalog.map((e, i) => ({
+        id: e.id || `enc_${i}_${Date.now()}`,
+        name: String(e.name || "Enchant"),
+        rarity: ["common", "rare", "epic"].includes(e.rarity) ? e.rarity : "common",
+        desc: String(e.desc || "")
+      }))
+    : structuredClone(DEFAULT_ENCHANT_CATALOG);
 
   return {
     ...base,
-    ...safe,
-    lastUpdated: safe.lastUpdated || formatNowCzech(),
+    ...parsed,
+    lastUpdated: parsed.lastUpdated || formatNowCzech(),
     totalChestOverride: overrideVal,
     enchantCatalog: catalog,
-    objectives: rawObjectives.map(normalizeObjective),
-    announcements: Array.isArray(safe.announcements) ? safe.announcements : [],
-    players: Array.isArray(safe.players) ? safe.players : base.players,
-    history: Array.isArray(safe.history) ? safe.history : []
+    objectives: Array.isArray(parsed.objectives)
+      ? parsed.objectives.map(normalizeObjective)
+      : [],
+    announcements: Array.isArray(parsed.announcements)
+      ? parsed.announcements.map(a => ({ ...a, pinned: Boolean(a.pinned) }))
+      : [],
+    players: Array.isArray(parsed.players)
+      ? parsed.players.map(p => ({
+          ...p,
+          rank: p.rank || "Member",
+          prestige: Math.max(0, Number(p.prestige) || 0),
+          weeklyGoal: Math.max(0, Number(p.weeklyGoal) || 0),
+          contrib: p.contrib || {}
+        }))
+      : base.players,
+    history: Array.isArray(parsed.history) ? parsed.history : []
   };
 }
 
 function loadData() {
   try {
+    if (window.location.hash.startsWith("#pit=")) {
+      const raw = window.location.hash.replace("#pit=", "");
+      const parsed = JSON.parse(decodeURIComponent(atob(raw)));
+      const hydrated = hydrateData(parsed);
+      localStorage.setItem("lap_pit_data_v14", JSON.stringify(hydrated));
+      return hydrated;
+    }
     const saved = localStorage.getItem("lap_pit_data_v14");
-    if (!saved) return deepCopy(defaultData);
+    if (!saved) return structuredClone(defaultData);
     return hydrateData(JSON.parse(saved));
   } catch {
-    return deepCopy(defaultData);
+    return structuredClone(defaultData);
   }
 }
 
-let data = loadData();
-let syncPausedUntil = 0;
+async function fetchRemoteData() {
+  const res = await fetch(`${FIREBASE_DB_URL}${FIREBASE_PATH}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Chyba při čtení databáze");
+  const json = await res.json();
+  return json ? hydrateData(json) : null;
+}
 
 async function pushRemoteData(payload) {
   const res = await fetch(`${FIREBASE_DB_URL}${FIREBASE_PATH}`, {
@@ -186,61 +219,59 @@ async function pushRemoteData(payload) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) throw new Error("Chyba při zápisu do databáze");
 }
 
-async function fetchRemoteData() {
-  const res = await fetch(`${FIREBASE_DB_URL}${FIREBASE_PATH}`, { cache: "no-store" });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const json = await res.json();
-  return json ? hydrateData(json) : null;
-}
-
-function saveData(touchTimestamp = true) {
+function saveData(touchTimestamp = true, syncRemote = true) {
   if (touchTimestamp) {
     data.lastUpdated = formatNowCzech();
   }
-  syncPausedUntil = Date.now() + 8000;
   localStorage.setItem("lap_pit_data_v14", JSON.stringify(data));
   renderAll();
-  pushRemoteData(data).catch(() => {});
+
+  if (syncRemote && !isSyncingFromRemote) {
+    pushRemoteData(data).catch(() => {
+      showToast("Uloženo lokálně (nepodařilo se spojit s Firebase).");
+    });
+  }
 }
 
 async function initRealtimeSync() {
   try {
     const remote = await fetchRemoteData();
-    if (remote && Date.now() > syncPausedUntil) {
+    if (remote) {
       data = remote;
       localStorage.setItem("lap_pit_data_v14", JSON.stringify(data));
       renderAll();
+    } else {
+      await pushRemoteData(data);
     }
-  } catch {}
+  } catch {
+    // Pokud není připojení, zůstanou lokální data
+  }
 
   setInterval(async () => {
-    if (document.hidden || Date.now() < syncPausedUntil) return;
+    if (document.hidden) return;
     try {
       const latest = await fetchRemoteData();
       if (!latest) return;
-      if (JSON.stringify(data) !== JSON.stringify(latest)) {
+      const currentSerialized = JSON.stringify(data);
+      const latestSerialized = JSON.stringify(latest);
+      if (currentSerialized !== latestSerialized) {
+        isSyncingFromRemote = true;
         data = latest;
         localStorage.setItem("lap_pit_data_v14", JSON.stringify(data));
         renderAll();
+        isSyncingFromRemote = false;
       }
-    } catch {}
+    } catch {
+      // Tichý pokus na pozadí
+    }
   }, 4000);
 }
 
-function isAdmin() {
-  const u = authState.currentUser;
-  return Boolean(u && (u.role === "admin" || String(u.username || "").toLowerCase() === "bowman"));
-}
-
-function isLoggedIn() {
-  return Boolean(authState.currentUser);
-}
-
-function getCurrentActorNick() {
-  return authState.currentUser?.mcNick || authState.currentUser?.username || "";
+function saveSavedPants() {
+  localStorage.setItem("lap_pit_saved_pants_v1", JSON.stringify(pantsState.savedPants));
 }
 
 function saveSession() {
@@ -252,27 +283,25 @@ function saveSession() {
   applyPermissions();
 }
 
-function applyAnnouncementAuthGuard() {
-  const gate = document.getElementById("announcementLoginGate");
-  const card = document.getElementById("announcementCreatorCard");
-  const hint = document.getElementById("annCreatorAuthorHint");
-  if (!gate || !card) return;
-  if (isLoggedIn()) {
-    gate.style.display = "none";
-    card.style.display = "";
-    if (hint) hint.innerHTML = `Vytváříš jako: <strong>${getCurrentActorNick()}</strong>`;
-  } else {
-    gate.style.display = "";
-    card.style.display = "none";
-  }
+function isAdmin() {
+  return authState.currentUser?.role === "admin";
+}
+
+function isLoggedIn() {
+  return Boolean(authState.currentUser);
 }
 
 function applyPantsAuthGuard() {
   const gate = document.getElementById("pantsAuthGate");
   const content = document.getElementById("pantsAuthenticatedContent");
   const adminEnchantCard = document.getElementById("adminEnchantCreatorCard");
-  if (adminEnchantCard) adminEnchantCard.style.display = isAdmin() ? "" : "none";
+
+  if (adminEnchantCard) {
+    adminEnchantCard.style.display = isAdmin() ? "" : "none";
+  }
+
   if (!gate || !content) return;
+
   if (isLoggedIn()) {
     gate.style.display = "none";
     content.style.display = "";
@@ -283,14 +312,9 @@ function applyPantsAuthGuard() {
 }
 
 function applyPermissions() {
-  document.querySelectorAll("[data-admin-only]").forEach(el => {
-    if (el.id === "tab-admin") {
-      el.style.display = isAdmin() ? "" : "none";
-    } else if (el.tagName === "SECTION") {
-      el.style.display = isAdmin() && el.classList.contains("active") ? "block" : "none";
-    } else {
-      el.style.display = isAdmin() ? "" : "none";
-    }
+  const adminOnlyEls = document.querySelectorAll("[data-admin-only]");
+  adminOnlyEls.forEach(el => {
+    el.style.display = isAdmin() ? "" : "none";
   });
 
   const userPill = document.getElementById("authUserPill");
@@ -298,13 +322,14 @@ function applyPermissions() {
   const logoutBtn = document.getElementById("logoutBtn");
 
   if (authState.currentUser) {
-    const { username, mcNick } = authState.currentUser;
-    const role = isAdmin() ? "admin" : "user";
+    const { username, mcNick, role } = authState.currentUser;
     document.getElementById("authUserAvatar").src = getMcHeadUrl(mcNick || username, 28);
     document.getElementById("authUserName").textContent = mcNick || username;
+
     const roleTag = document.getElementById("authUserRole");
     roleTag.textContent = role === "admin" ? "ADMIN" : "USER";
     roleTag.className = role === "admin" ? "role-tag admin" : "role-tag";
+
     userPill.style.display = "flex";
     openBtn.style.display = "none";
     logoutBtn.style.display = "";
@@ -320,7 +345,6 @@ function applyPermissions() {
   }
 
   applyPantsAuthGuard();
-  applyAnnouncementAuthGuard();
 }
 
 function openAuthModal() {
@@ -337,7 +361,9 @@ function closeAuthModal() {
 }
 
 function handleBackdropClick(e) {
-  if (e.target.id === "authModal") closeAuthModal();
+  if (e.target.id === "authModal") {
+    closeAuthModal();
+  }
 }
 
 function togglePasswordVisibility() {
@@ -350,18 +376,32 @@ function submitAuthForm(e) {
   const feedback = document.getElementById("authFeedback");
   const username = document.getElementById("authUsername").value.trim().toLowerCase();
   const password = document.getElementById("authPassword").value;
-  const found = ACCOUNTS.find(a => a.username.toLowerCase() === username && a.password === password);
+
+  const found = ACCOUNTS.find(
+    acc => acc.username.toLowerCase() === username && acc.password === password
+  );
+
   if (!found) {
     feedback.textContent = "Neplatné login jméno nebo heslo.";
     feedback.className = "auth-feedback";
     return;
   }
+
   const effectiveRole = found.username.toLowerCase() === "bowman" ? "admin" : "user";
-  authState.currentUser = { username: found.username, mcNick: found.mcNick, role: effectiveRole };
+
+  authState.currentUser = {
+    username: found.username,
+    mcNick: found.mcNick,
+    role: effectiveRole
+  };
   saveSession();
-  renderAll();
+  renderPantsTab();
   feedback.textContent = `Přihlášeno jako ${found.mcNick} (${effectiveRole}).`;
   feedback.className = "auth-feedback ok";
+  renderPodium();
+  renderRoster();
+  renderAnnouncements();
+
   setTimeout(() => {
     closeAuthModal();
     showToast(`Přihlášen jako ${found.mcNick}`);
@@ -371,7 +411,10 @@ function submitAuthForm(e) {
 function logoutUser() {
   authState.currentUser = null;
   saveSession();
-  renderAll();
+  renderPantsTab();
+  renderPodium();
+  renderRoster();
+  renderAnnouncements();
   showToast("Byl jsi odhlášen.");
 }
 
@@ -380,6 +423,7 @@ function switchTab(tab) {
     showToast("Správa je dostupná pouze pro účet Bowmanik (bowman).");
     return;
   }
+
   if (tab === "pants" && !isLoggedIn()) {
     applyPantsAuthGuard();
     document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
@@ -388,22 +432,19 @@ function switchTab(tab) {
     const btn = document.querySelector('.nav-tab[data-tab="pants"]');
     if (btn) btn.classList.add("active");
     openAuthModal();
+    showToast("Pro vstup do sekce Pants se musíš přihlásit.");
     return;
   }
+
   document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
   document.querySelectorAll(".nav-tab").forEach(el => el.classList.remove("active"));
-  const targetSec = document.getElementById(`tab-${tab}`);
-  if (targetSec) {
-    targetSec.classList.add("active");
-    if (tab === "admin") {
-      targetSec.style.display = isAdmin() ? "block" : "none";
-      renderAdmin();
-    }
-  }
+
+  document.getElementById(`tab-${tab}`).classList.add("active");
   const btn = document.querySelector(`.nav-tab[data-tab="${tab}"]`);
   if (btn) btn.classList.add("active");
 }
 
+/* PANTS LOGIKA */
 function getColorObj(colorId) {
   return PANTS_COLORS.find(c => c.id === colorId) || PANTS_COLORS[0];
 }
@@ -415,14 +456,18 @@ function pickRandomPantsColor() {
 function openPantsCrate() {
   if (!isLoggedIn()) {
     openAuthModal();
+    showToast("Nejprve se přihlas.");
     return;
   }
+
   const chestTier = Number(document.getElementById("pantsChestTier")?.value || 10);
   const chanceByTier = { 8: 6, 9: 8, 10: 10 };
   const chance = chanceByTier[chestTier] ?? 8;
+
   pantsState.cratesOpened += 1;
   const hit = (Math.random() * 100) < chance;
   const statusEl = document.getElementById("pantsCrateStatus");
+
   if (hit) {
     const droppedColor = pickRandomPantsColor();
     pantsState.pantsDroppedCount += 1;
@@ -431,16 +476,23 @@ function openPantsCrate() {
       colorId: droppedColor.id,
       tier: 0,
       enchants: [],
-      fromChest: `T${chestTier}`
+      fromChest: `Tier ${chestTier} Bedna`
     };
+    const msg = `Gratuluju získal si ${droppedColor.name}`;
     if (statusEl) {
       statusEl.className = "pants-status-box hit";
-      statusEl.innerHTML = `<strong>${droppedColor.name} • T0</strong>`;
+      statusEl.innerHTML = `🎉 <strong>${msg}!</strong> Teď je můžeš enchantovat přes Tier 1 → Tier 2 → Tier 3.`;
     }
-  } else if (statusEl) {
-    statusEl.className = "pants-status-box miss";
-    statusEl.innerHTML = `<strong>Nevadi, zkus to priste</strong>`;
+    showToast(`🎉 ${msg}!`);
+  } else {
+    const missMsg = "Nevadi, zkus to priste";
+    if (statusEl) {
+      statusEl.className = "pants-status-box miss";
+      statusEl.innerHTML = `❌ <strong>${missMsg}</strong>`;
+    }
+    showToast(missMsg);
   }
+
   renderPantsTab();
 }
 
@@ -453,7 +505,7 @@ function resetCurrentPants() {
   const statusEl = document.getElementById("pantsCrateStatus");
   if (statusEl) {
     statusEl.className = "pants-status-box";
-    statusEl.textContent = "Tier 8–10";
+    statusEl.innerHTML = `Vyber <strong>Tier 8</strong>, <strong>Tier 9</strong> nebo <strong>Tier 10</strong> bednu a klikni na <strong>🎁 Vyzvednout bednu</strong>.`;
   }
   renderPantsTab();
 }
@@ -474,27 +526,50 @@ function pickRandomEnchantLevel() {
 function rollNextEnchant(currentEnchants) {
   const catalog = data.enchantCatalog || [];
   if (catalog.length === 0) return null;
+
   const existingNames = new Set(currentEnchants.map(e => e.name));
   const hasReallyAlive = existingNames.has("Really Alive");
   const hasExcess = existingNames.has("Excess");
-  const isForbiddenTogether = (candidateName) =>
-    (candidateName === "Really Alive" && hasExcess) || (candidateName === "Excess" && hasReallyAlive);
+
+  const isForbiddenTogether = (candidateName) => {
+    if (candidateName === "Really Alive" && hasExcess) return true;
+    if (candidateName === "Excess" && hasReallyAlive) return true;
+    return false;
+  };
 
   let pool = [];
   for (let attempt = 0; attempt < 25; attempt++) {
     const rarity = pickRandomRarity();
-    const candidates = catalog.filter(e => e.rarity === rarity && !existingNames.has(e.name) && !isForbiddenTogether(e.name));
+    const candidates = catalog.filter(
+      e => e.rarity === rarity && !existingNames.has(e.name) && !isForbiddenTogether(e.name)
+    );
     if (candidates.length > 0) {
       pool = candidates;
       break;
     }
   }
-  if (pool.length === 0) pool = catalog.filter(e => !existingNames.has(e.name) && !isForbiddenTogether(e.name));
-  if (pool.length === 0) pool = catalog.filter(e => !isForbiddenTogether(e.name));
+
+  if (pool.length === 0) {
+    pool = catalog.filter(
+      e => !existingNames.has(e.name) && !isForbiddenTogether(e.name)
+    );
+  }
+
+  if (pool.length === 0) {
+    pool = catalog.filter(e => !isForbiddenTogether(e.name));
+  }
+
   if (pool.length === 0) return null;
 
   const chosen = pool[Math.floor(Math.random() * pool.length)];
-  return { name: chosen.name, rarity: chosen.rarity, level: pickRandomEnchantLevel() };
+  const rolledEnchantTier = pickRandomEnchantLevel();
+
+  return {
+    name: chosen.name,
+    rarity: chosen.rarity,
+    level: rolledEnchantTier,
+    desc: chosen.desc
+  };
 }
 
 function enchantCurrentPantsStep() {
@@ -502,20 +577,32 @@ function enchantCurrentPantsStep() {
     openAuthModal();
     return;
   }
+
   const p = pantsState.currentPants;
   if (!p || p.tier >= 3) return;
+
+  const nextPantsTier = p.tier + 1;
   const rolled = rollNextEnchant(p.enchants);
-  if (!rolled) return;
-  p.tier += 1;
+  if (!rolled) {
+    showToast("V katalogu nejsou dostupné žádné enchanty.");
+    return;
+  }
+
+  p.tier = nextPantsTier;
   p.enchants.push(rolled);
+
   if (p.tier === 3) {
     pantsState.savedPants.unshift({
-      ...deepCopy(p),
-      owner: getCurrentActorNick() || "Hráč",
+      ...structuredClone(p),
+      owner: authState.currentUser?.mcNick || authState.currentUser?.username || "Hráč",
       createdAt: formatNowCzech()
     });
-    localStorage.setItem("lap_pit_saved_pants_v1", JSON.stringify(pantsState.savedPants));
+    saveSavedPants();
+    showToast(`✨ Dokončeny Tier 3 ${getColorObj(p.colorId).name}!`);
+  } else {
+    showToast(`✨ Enchantnuto na Tier ${p.tier} (${rolled.name} ${ROMAN_TIERS[rolled.level]})`);
   }
+
   renderPantsTab();
 }
 
@@ -523,29 +610,46 @@ function addCustomEnchant() {
   if (!isAdmin()) return;
   const name = document.getElementById("newEnchantName").value.trim();
   const rarity = document.getElementById("newEnchantRarity").value;
-  if (!name) return;
-  data.enchantCatalog.push({ id: `enc_${Date.now()}`, name, rarity });
+  const desc = document.getElementById("newEnchantDesc").value.trim() || "Vlastní enchant přidaný adminem.";
+
+  if (!name) {
+    showToast("Vyplň název enchantu.");
+    return;
+  }
+
+  data.enchantCatalog.push({
+    id: `enc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    name,
+    rarity: ["common", "rare", "epic"].includes(rarity) ? rarity : "common",
+    desc
+  });
+
   document.getElementById("newEnchantName").value = "";
+  document.getElementById("newEnchantDesc").value = "";
   saveData();
+  showToast(`Enchant "${name}" přidán.`);
 }
 
 function removeCustomEnchant(encId) {
   if (!isAdmin()) return;
   data.enchantCatalog = data.enchantCatalog.filter(e => e.id !== encId);
   saveData();
+  showToast("Enchant odebrán.");
 }
 
 function resetEnchantsToDefault() {
   if (!isAdmin()) return;
   if (!confirm("Obnovit výchozí seznam enchantů?")) return;
-  data.enchantCatalog = deepCopy(DEFAULT_ENCHANT_CATALOG);
+  data.enchantCatalog = structuredClone(DEFAULT_ENCHANT_CATALOG);
   saveData();
+  showToast("Výchozí enchanty obnoveny.");
 }
 
 function clearSavedPants() {
   if (!isLoggedIn()) return;
   pantsState.savedPants = [];
-  localStorage.setItem("lap_pit_saved_pants_v1", "[]");
+  saveSavedPants();
+  showToast("Sbírka Tier 3 pantů vymazána.");
   renderPantsTab();
 }
 
@@ -556,9 +660,9 @@ function renderPantsTab() {
   const statsRow = document.getElementById("pantsStatsRow");
   if (statsRow) {
     statsRow.innerHTML = `
-      <span>Bedny: <strong>${pantsState.cratesOpened}</strong></span>
-      <span>Drop: <strong>${pantsState.pantsDroppedCount}</strong></span>
-      <span>T3: <strong>${pantsState.savedPants.length}</strong></span>
+      <span>Otevřené bedny: <strong>${pantsState.cratesOpened}</strong></span>
+      <span>Padlé panty: <strong>${pantsState.pantsDroppedCount}</strong></span>
+      <span>Dokončené T3: <strong>${pantsState.savedPants.length}</strong></span>
     `;
   }
 
@@ -566,21 +670,32 @@ function renderPantsTab() {
   if (workbench) {
     const p = pantsState.currentPants;
     if (!p) {
-      workbench.innerHTML = `<div class="pants-item-card"><div class="player-name">—</div></div>`;
+      workbench.innerHTML = `
+        <div class="pants-item-card">
+          <div class="player-name">Čeká na drop pantů z bedny</div>
+          <p class="muted-text" style="margin-top:6px;">
+            Jakmile ti z bedny padnou náhodné panty (<strong>Red</strong>, <strong>Green</strong>, <strong>Blue</strong> nebo <strong>Yellow</strong>), můžeš je zde postupně enchantovat přes <strong>Tier 1 → Tier 2 → Tier 3</strong>. U každého enchantu může padnout libovolný tier (<strong>I</strong>, <strong>II</strong> nebo <strong>III</strong>).
+          </p>
+        </div>
+      `;
     } else {
       const col = getColorObj(p.colorId);
-      const enchantsHtml = p.enchants.map(e => `
-        <div class="enchant-line border-${e.rarity}">
-          <div class="enchant-line-top">
-            <strong class="enchant-name-${e.rarity}">${e.name} ${ROMAN_TIERS[e.level]}</strong>
-            <span class="rarity-pill rarity-${e.rarity}">${e.rarity}</span>
-          </div>
-        </div>
-      `).join("");
+      const tierLabel = p.tier === 0 ? "Čisté panty (Tier 0)" : `Tier ${p.tier} Panty`;
+      const enchantsHtml = p.enchants.length
+        ? p.enchants.map(e => `
+            <div class="enchant-line border-${e.rarity}">
+              <div class="enchant-line-top">
+                <strong class="enchant-name-${e.rarity}">${e.name} ${ROMAN_TIERS[e.level]}</strong>
+                <span class="rarity-pill rarity-${e.rarity}">${e.rarity}</span>
+              </div>
+              <div class="enchant-desc">${e.desc}</div>
+            </div>
+          `).join("")
+        : `<p class="muted-text" style="margin-top:10px;">Zatím žádné enchanty. Klikni pro enchantnutí na <strong>Tier 1</strong>.</p>`;
 
       const actionBtnHtml = p.tier < 3
-        ? `<button type="button" class="btn btn-green" onclick="enchantCurrentPantsStep()">✨ Tier ${p.tier + 1}</button>`
-        : `<div class="completion-box" style="margin-top:12px; margin-bottom:0;"><span>Tier 3</span><strong>✅</strong></div>`;
+        ? `<button type="button" class="btn btn-green" onclick="enchantCurrentPantsStep()">✨ Enchantnout na Tier ${p.tier + 1}</button>`
+        : `<div class="completion-box" style="margin-top:12px; margin-bottom:0;"><span>Stav itemu</span><strong>✅ HOTOVO • TIER 3 PANTY</strong></div>`;
 
       workbench.innerHTML = `
         <div class="pants-item-card ${col.cardClass}">
@@ -588,12 +703,14 @@ function renderPantsTab() {
             <div>
               <span class="pants-swatch ${col.swatchClass}" style="vertical-align:middle; margin-right:6px;"></span>
               <strong style="font-size:1.05rem;">${col.name}</strong>
-              <span class="player-sub">• T${p.tier}</span>
+              <span class="player-sub">• ${tierLabel}</span>
             </div>
-            <span class="obj-badge">${p.fromChest || ""}</span>
+            <span class="obj-badge">${p.fromChest || "Bedna"}</span>
           </div>
           ${enchantsHtml}
-          <div class="admin-actions">${actionBtnHtml}</div>
+          <div class="admin-actions">
+            ${actionBtnHtml}
+          </div>
         </div>
       `;
     }
@@ -603,22 +720,25 @@ function renderPantsTab() {
   if (catalogGrid) {
     const catalog = data.enchantCatalog || [];
     const byRarity = [
-      { key: "common", title: "Common", items: catalog.filter(e => e.rarity === "common") },
-      { key: "rare", title: "Rare", items: catalog.filter(e => e.rarity === "rare") },
-      { key: "epic", title: "Epic", items: catalog.filter(e => e.rarity === "epic") }
+      { key: "common", title: "⚪ Common Enchanty (Šedá • 60 %)", items: catalog.filter(e => e.rarity === "common") },
+      { key: "rare", title: "🔵 Rare Enchanty (Modrá • 30 %)", items: catalog.filter(e => e.rarity === "rare") },
+      { key: "epic", title: "🟣 Epic Enchanty (Fialová • 10 %)", items: catalog.filter(e => e.rarity === "epic") }
     ];
+
     catalogGrid.innerHTML = byRarity.map(group => `
       <div class="pants-item-card">
         <h3 style="margin-bottom:8px;">${group.title}</h3>
+        ${group.items.length === 0 ? `<p class="muted-text">Žádné enchanty v této kategorii.</p>` : ""}
         ${group.items.map(it => `
           <div class="enchant-line border-${it.rarity}">
             <div class="enchant-line-top">
               <strong class="enchant-name-${it.rarity}">${it.name}</strong>
               <div style="display:flex; align-items:center; gap:6px;">
-                <span class="muted-text" style="font-size:0.76rem;">I–III</span>
+                <span class="muted-text" style="font-size:0.76rem;">Tier I–III (náhodně)</span>
                 ${isAdmin() ? `<button type="button" class="btn btn-red" style="padding:2px 7px; font-size:0.72rem;" onclick="removeCustomEnchant('${it.id}')">✕</button>` : ""}
               </div>
             </div>
+            <div class="enchant-desc">${it.desc}</div>
           </div>
         `).join("")}
       </div>
@@ -628,7 +748,7 @@ function renderPantsTab() {
   const savedGrid = document.getElementById("savedPantsGrid");
   if (savedGrid) {
     if (pantsState.savedPants.length === 0) {
-      savedGrid.innerHTML = `<p class="muted-text">—</p>`;
+      savedGrid.innerHTML = `<p class="muted-text">Zatím nemáš dokončené žádné Tier 3 panty.</p>`;
     } else {
       savedGrid.innerHTML = pantsState.savedPants.map(item => {
         const col = getColorObj(item.colorId);
@@ -637,9 +757,9 @@ function renderPantsTab() {
             <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;">
               <div>
                 <span class="pants-swatch ${col.swatchClass}" style="vertical-align:middle; margin-right:6px;"></span>
-                <strong>${col.name} • T3</strong>
+                <strong>${col.name} • Tier 3</strong>
               </div>
-              <span class="obj-badge reward">${item.owner || ""}</span>
+              <span class="obj-badge reward">${item.owner || "Hráč"}</span>
             </div>
             <div class="player-sub" style="margin-top:0; margin-bottom:8px;">${item.createdAt || ""}</div>
             ${item.enchants.map(e => `
@@ -648,6 +768,7 @@ function renderPantsTab() {
                   <strong class="enchant-name-${e.rarity}">${e.name} ${ROMAN_TIERS[e.level]}</strong>
                   <span class="rarity-pill rarity-${e.rarity}">${e.rarity}</span>
                 </div>
+                <div class="enchant-desc">${e.desc}</div>
               </div>
             `).join("")}
           </div>
@@ -657,6 +778,7 @@ function renderPantsTab() {
   }
 }
 
+/* OBJECTIVES & PODIUM & ROSTER */
 function renderTierGoalInputs() {
   const grid = document.getElementById("tierGoalsGrid");
   if (!grid || grid.children.length > 0) return;
@@ -664,8 +786,8 @@ function renderTierGoalInputs() {
   for (let t = 0; t <= 10; t++) {
     html += `
       <div class="field">
-        <label for="tierGoal_${t}">Cíl T${t}</label>
-        <input type="number" min="1" id="tierGoal_${t}" placeholder="—" />
+        <label for="tierGoal_${t}">Cíl T${t} (nepovinné)</label>
+        <input type="number" min="1" id="tierGoal_${t}" placeholder="Bez hodnoty" />
       </div>
     `;
   }
@@ -696,7 +818,9 @@ function getNextConfiguredTierGoal(obj, fromTier) {
   const tiers = obj.tiers || EMPTY_TIERS_T0_TO_T10;
   for (let t = fromTier + 1; t <= 10; t++) {
     const g = parseOptionalTierGoal(tiers[t]);
-    if (g !== null) return { tier: t, goal: g };
+    if (g !== null) {
+      return { tier: t, goal: g };
+    }
   }
   return null;
 }
@@ -706,19 +830,35 @@ function getObjectiveProgressInfo(obj) {
   const activeTier = Math.min(10, Math.max(0, Number(obj.activeTier) ?? 0));
   const tierGoal = parseOptionalTierGoal(tiers[activeTier]);
   const rewardCompleted = Boolean(obj.rewardCompleted);
+
   const rawDone = typeof obj.currentDone === "number" && !Number.isNaN(obj.currentDone)
     ? Math.max(0, obj.currentDone)
     : getPlayersSumForObjective(obj.id);
+
   const doneValue = rewardCompleted && tierGoal ? Math.max(rawDone, tierGoal) : rawDone;
-  const pct = rewardCompleted ? 100 : (tierGoal ? Math.min(100, Math.round((doneValue / tierGoal) * 100)) : 0);
-  const missingInCurrentTier = tierGoal ? Math.max(0, tierGoal - doneValue) : null;
+  const pct = rewardCompleted
+    ? 100
+    : (tierGoal ? Math.min(100, Math.round((doneValue / tierGoal) * 100)) : 0);
+
+  const missingInCurrentTier = tierGoal
+    ? Math.max(0, tierGoal - doneValue)
+    : null;
+
   const nextTierObj = getNextConfiguredTierGoal(obj, activeTier);
-  const missingToNextTier = nextTierObj ? Math.max(0, nextTierObj.goal - doneValue) : null;
-  const reachedTier = rewardCompleted || (tierGoal && doneValue >= tierGoal) ? activeTier : Math.max(0, activeTier - 1);
+  const missingToNextTier = nextTierObj
+    ? Math.max(0, nextTierObj.goal - doneValue)
+    : null;
+
+  const reachedTier = rewardCompleted || (tierGoal && doneValue >= tierGoal)
+    ? activeTier
+    : Math.max(0, activeTier - 1);
 
   let tierBadgeText = `Tier T${activeTier}`;
-  if (rewardCompleted) tierBadgeText = `🎁 Reward bedna • T${activeTier} splněno`;
-  else if (tierGoal && doneValue >= tierGoal) tierBadgeText = `T${activeTier} splněno`;
+  if (rewardCompleted) {
+    tierBadgeText = `🎁 Reward bedna • T${activeTier} splněno`;
+  } else if (tierGoal && doneValue >= tierGoal) {
+    tierBadgeText = `T${activeTier} splněno`;
+  }
 
   return {
     activeTier,
@@ -739,15 +879,24 @@ function getTotalChestInfo() {
     const t = Math.min(10, Math.max(0, Number(obj.activeTier) ?? 0));
     return { label: `#${idx + 1} ${obj.title}`, tier: t };
   });
+
   const rawSum = parts.reduce((acc, p) => acc + p.tier, 0);
   const clampedSum = Math.min(10, Math.max(0, rawSum));
   const isManual = data.totalChestOverride !== null && data.totalChestOverride !== undefined;
-  const totalTier = isManual ? Math.min(10, Math.max(0, Number(data.totalChestOverride) || 0)) : clampedSum;
+  const totalTier = isManual
+    ? Math.min(10, Math.max(0, Number(data.totalChestOverride) || 0))
+    : clampedSum;
+
   const formulaText = parts.length > 0
     ? parts.map(p => `T${p.tier}`).join(" + ") + (rawSum > 10 && !isManual ? ` (součet ${rawSum} → max T10)` : "")
     : "Žádné objectives (T0)";
 
-  return { totalTier, rawSum, isManual, formulaText };
+  return {
+    totalTier,
+    rawSum,
+    isManual,
+    formulaText
+  };
 }
 
 function getPlayerOverallSharePct(player) {
@@ -773,7 +922,9 @@ function renderSortSelect() {
   data.objectives.forEach((obj, idx) => {
     select.innerHTML += `<option value="obj:${obj.id}">Podle: ${obj.title} (#${idx + 1})</option>`;
   });
-  if ([...select.options].some(o => o.value === currentVal)) select.value = currentVal;
+  if ([...select.options].some(o => o.value === currentVal)) {
+    select.value = currentVal;
+  }
 }
 
 function renderTotalChestBanners() {
@@ -786,8 +937,10 @@ function renderTotalChestBanners() {
     </div>
     <div class="total-chest-tier">🎁 Celková bedna: T${chest.totalTier}</div>
   `;
+
   const ovBanner = document.getElementById("totalChestBanner");
   if (ovBanner) ovBanner.innerHTML = bannerHtml;
+
   const objBanner = document.getElementById("objTotalChestBanner");
   if (objBanner) objBanner.innerHTML = bannerHtml;
 }
@@ -833,6 +986,7 @@ function renderObjectives() {
     const ratioText = info.tierGoal
       ? `T${info.activeTier}: ${info.doneValue.toLocaleString("cs-CZ")} / ${info.tierGoal.toLocaleString("cs-CZ")} ${obj.unit}`
       : `T${info.activeTier}: ${info.doneValue.toLocaleString("cs-CZ")} ${obj.unit} (cíl nenastaven)`;
+
     const missingText = info.missingInCurrentTier !== null
       ? `Chybí do T${info.activeTier}: <strong>${info.missingInCurrentTier.toLocaleString("cs-CZ")} ${obj.unit}</strong>`
       : "Cíl aktuálního tieru bez hodnoty";
@@ -863,8 +1017,9 @@ function renderObjectives() {
     const info = getObjectiveProgressInfo(obj);
     const tierListHtml = (obj.tiers || EMPTY_TIERS_T0_TO_T10).map((rawGoal, tIdx) => {
       const goal = parseOptionalTierGoal(rawGoal);
-      const isCurrent = tIdx === info.activeTier;
-      const isDone = tIdx < info.activeTier || (tIdx === info.activeTier && (info.rewardCompleted || (goal && info.doneValue >= goal)));
+      const tNum = tIdx;
+      const isCurrent = tNum === info.activeTier;
+      const isDone = tNum < info.activeTier || (tNum === info.activeTier && (info.rewardCompleted || (goal && info.doneValue >= goal)));
       const statusIcon = isDone ? "✅" : (isCurrent ? "🔥" : "⬜");
 
       let rightLabel = "Bez hodnoty";
@@ -877,7 +1032,7 @@ function renderObjectives() {
 
       return `
         <div style="display:flex; justify-content:space-between; padding:5px 0; border-top:1px solid var(--border); font-size:0.84rem; gap:8px;">
-          <span>${statusIcon} <strong>Tier T${tIdx}</strong> ${isCurrent ? "(aktuální)" : ""}</span>
+          <span>${statusIcon} <strong>Tier T${tNum}</strong> ${isCurrent ? "(aktuální)" : ""}</span>
           <span>${rightLabel}</span>
         </div>
       `;
@@ -909,7 +1064,10 @@ function buildPlayerContribHtml(player) {
   const goalLine = player.weeklyGoal > 0
     ? `<div class="obj-progress-top" style="margin-bottom:8px;"><span>🎯 Týdenní cíl: ${getPlayerTotalUnits(player).toLocaleString("cs-CZ")} / ${player.weeklyGoal.toLocaleString("cs-CZ")}</span><strong>${Math.min(100, Math.round((getPlayerTotalUnits(player) / player.weeklyGoal) * 100))} %</strong></div>`
     : "";
-  if (data.objectives.length === 0) return `${goalLine}<div class="player-sub">Zatím žádné aktivní objectives</div>`;
+
+  if (data.objectives.length === 0) {
+    return `${goalLine}<div class="player-sub">Zatím žádné aktivní objectives</div>`;
+  }
 
   return goalLine + data.objectives.map(obj => {
     const made = getPlayerContrib(player, obj.id);
@@ -917,7 +1075,9 @@ function buildPlayerContribHtml(player) {
     const playersSum = getPlayersSumForObjective(obj.id);
     const denom = playersSum > 0 ? playersSum : info.doneValue;
     const sharePct = denom > 0 ? Math.round((made / denom) * 100) : 0;
-    const barPct = info.tierGoal ? Math.min(100, Math.round((made / info.tierGoal) * 100)) : Math.min(100, sharePct);
+    const barPct = info.tierGoal
+      ? Math.min(100, Math.round((made / info.tierGoal) * 100))
+      : Math.min(100, sharePct);
 
     return `
       <div class="obj-progress-item">
@@ -936,23 +1096,50 @@ function buildPlayerContribHtml(player) {
 function openPlayerDetailModal(playerId) {
   const player = data.players.find(p => p.id === playerId);
   if (!player) return;
+
   const totalUnits = getPlayerTotalUnits(player);
   const sharePct = getPlayerOverallSharePct(player);
+
   document.getElementById("playerModalAvatar").src = getMcHeadUrl(player.nick, 48);
   document.getElementById("playerModalNick").textContent = player.nick;
-  document.getElementById("playerModalMeta").textContent = `${player.rank} • Prestige ${player.prestige}`;
-  const goalPct = player.weeklyGoal > 0 ? Math.min(100, Math.round((totalUnits / player.weeklyGoal) * 100)) : null;
+  document.getElementById("playerModalMeta").textContent =
+    `${player.rank} • Prestige ${player.prestige}`;
+
+  const goalPct = player.weeklyGoal > 0
+    ? Math.min(100, Math.round((totalUnits / player.weeklyGoal) * 100))
+    : null;
+
   const objBreakdown = data.objectives.length
-    ? data.objectives.map(obj => `<div class="obj-progress-item"><div class="obj-progress-top"><span>${obj.title}</span><strong>${getPlayerContrib(player, obj.id).toLocaleString("cs-CZ")} ${obj.unit}</strong></div></div>`).join("")
+    ? data.objectives.map(obj => {
+        const made = getPlayerContrib(player, obj.id);
+        return `
+          <div class="obj-progress-item">
+            <div class="obj-progress-top">
+              <span>${obj.title}</span>
+              <strong>${made.toLocaleString("cs-CZ")} ${obj.unit}</strong>
+            </div>
+          </div>
+        `;
+      }).join("")
     : `<p class="muted-text">Zatím nejsou nastaveny žádné společné objectives.</p>`;
 
   document.getElementById("playerModalBody").innerHTML = `
-    <div class="completion-box"><span>Celkový podíl na plnění</span><strong>${data.objectives.length ? `${sharePct} %` : "—"}</strong></div>
-    <div class="admin-player-item" style="margin-bottom:12px;"><span>Celkem nahráno tento týden</span><strong>${totalUnits.toLocaleString("cs-CZ")}</strong></div>
-    <div class="admin-player-item" style="margin-bottom:14px;"><span>Týdenní cíl hráče</span><strong>${player.weeklyGoal > 0 ? `${totalUnits.toLocaleString("cs-CZ")} / ${player.weeklyGoal.toLocaleString("cs-CZ")} (${goalPct} %)` : "Nenastaven"}</strong></div>
+    <div class="completion-box">
+      <span>Celkový podíl na plnění</span>
+      <strong>${data.objectives.length ? `${sharePct} %` : "—"}</strong>
+    </div>
+    <div class="admin-player-item" style="margin-bottom:12px;">
+      <span>Celkem nahráno tento týden</span>
+      <strong>${totalUnits.toLocaleString("cs-CZ")}</strong>
+    </div>
+    <div class="admin-player-item" style="margin-bottom:14px;">
+      <span>Týdenní cíl hráče</span>
+      <strong>${player.weeklyGoal > 0 ? `${totalUnits.toLocaleString("cs-CZ")} / ${player.weeklyGoal.toLocaleString("cs-CZ")} (${goalPct} %)` : "Nenastaven"}</strong>
+    </div>
     <h3 style="margin-bottom:8px; font-size:0.95rem;">Příspěvky podle objectives</h3>
     ${objBreakdown}
   `;
+
   document.getElementById("playerModal").classList.add("open");
 }
 
@@ -961,16 +1148,28 @@ function closePlayerModal() {
 }
 
 function handlePlayerBackdropClick(e) {
-  if (e.target.id === "playerModal") closePlayerModal();
+  if (e.target.id === "playerModal") {
+    closePlayerModal();
+  }
 }
 
 function renderPodium() {
   const sorted = data.players
-    .map(p => ({ ...p, sharePct: getPlayerOverallSharePct(p), totalUnits: getPlayerTotalUnits(p) }))
-    .sort((a, b) => (b.totalUnits !== a.totalUnits ? b.totalUnits - a.totalUnits : (b.prestige || 0) - (a.prestige || 0)));
+    .map(p => ({
+      ...p,
+      sharePct: getPlayerOverallSharePct(p),
+      totalUnits: getPlayerTotalUnits(p)
+    }))
+    .sort((a, b) => {
+      if (b.totalUnits !== a.totalUnits) return b.totalUnits - a.totalUnits;
+      return (b.prestige || 0) - (a.prestige || 0);
+    });
+
+  const podiumGrid = document.getElementById("podiumGrid");
   const medals = ["🥇", "🥈", "🥉"];
   const activeNick = authState.currentUser?.mcNick?.toLowerCase();
-  document.getElementById("podiumGrid").innerHTML = sorted.slice(0, 3).map((p, i) => {
+
+  podiumGrid.innerHTML = sorted.slice(0, 3).map((p, i) => {
     const isMe = activeNick && p.nick.toLowerCase() === activeNick;
     return `
       <div class="podium-card rank-${i + 1}" onclick="openPlayerDetailModal(${p.id})">
@@ -979,10 +1178,16 @@ function renderPodium() {
           <img class="skin-head" src="${getMcHeadUrl(p.nick, 48)}" alt="${p.nick}" onerror="this.src='https://mc-heads.net/avatar/MHF_Steve/48'" />
           <div>
             <div class="player-name">${p.nick} ${isMe ? "• Ty" : ""}</div>
-            <div class="player-sub"><span class="rank-pill rank-${p.rank}">${p.rank}</span>Prestige ${p.prestige}</div>
+            <div class="player-sub">
+              <span class="rank-pill rank-${p.rank}">${p.rank}</span>
+              Prestige ${p.prestige}
+            </div>
           </div>
         </div>
-        <div class="completion-box"><span>Podíl na plnění</span><strong>${data.objectives.length ? `${p.sharePct} %` : "—"}</strong></div>
+        <div class="completion-box">
+          <span>Podíl na plnění</span>
+          <strong>${data.objectives.length ? `${p.sharePct} %` : "—"}</strong>
+        </div>
         ${buildPlayerContribHtml(p)}
       </div>
     `;
@@ -991,12 +1196,18 @@ function renderPodium() {
 
 function renderRoster() {
   renderSortSelect();
+
   const search = document.getElementById("searchInput").value.trim().toLowerCase();
   const rankFilter = document.getElementById("rankFilterSelect").value;
   const sortBy = document.getElementById("sortSelect").value;
   const activeNick = authState.currentUser?.mcNick?.toLowerCase();
+
   const list = data.players
-    .map(p => ({ ...p, sharePct: getPlayerOverallSharePct(p), totalUnits: getPlayerTotalUnits(p) }))
+    .map(p => ({
+      ...p,
+      sharePct: getPlayerOverallSharePct(p),
+      totalUnits: getPlayerTotalUnits(p)
+    }))
     .filter(p => p.nick.toLowerCase().includes(search))
     .filter(p => rankFilter === "all" || p.rank === rankFilter)
     .sort((a, b) => {
@@ -1006,7 +1217,8 @@ function renderRoster() {
         const objId = sortBy.replace("obj:", "");
         return getPlayerContrib(b, objId) - getPlayerContrib(a, objId);
       }
-      return b.totalUnits !== a.totalUnits ? b.totalUnits - a.totalUnits : (b.prestige || 0) - (a.prestige || 0);
+      if (b.totalUnits !== a.totalUnits) return b.totalUnits - a.totalUnits;
+      return (b.prestige || 0) - (a.prestige || 0);
     });
 
   const rosterGrid = document.getElementById("rosterGrid");
@@ -1014,6 +1226,7 @@ function renderRoster() {
     rosterGrid.innerHTML = `<p class="muted-text">Žádný hráč neodpovídá filtru.</p>`;
     return;
   }
+
   rosterGrid.innerHTML = list.map(p => {
     const isMe = activeNick && p.nick.toLowerCase() === activeNick;
     return `
@@ -1023,7 +1236,10 @@ function renderRoster() {
             <img class="skin-head" src="${getMcHeadUrl(p.nick, 48)}" alt="${p.nick}" onerror="this.src='https://mc-heads.net/avatar/MHF_Steve/48'" />
             <div>
               <div class="player-name">${p.nick} ${isMe ? "• Ty" : ""}</div>
-              <div class="player-sub"><span class="rank-pill rank-${p.rank}">${p.rank}</span>Prestige ${p.prestige}</div>
+              <div class="player-sub">
+                <span class="rank-pill rank-${p.rank}">${p.rank}</span>
+                Prestige ${p.prestige}
+              </div>
             </div>
           </div>
           <div class="roster-share-badge">${data.objectives.length ? `${p.sharePct} %` : "—"}</div>
@@ -1034,95 +1250,108 @@ function renderRoster() {
   }).join("");
 }
 
+/* ANNOUNCEMENTS */
 function addAnnouncement() {
-  if (!isLoggedIn()) {
-    openAuthModal();
-    return;
-  }
+  if (!isAdmin()) return;
   const title = document.getElementById("annTitle").value.trim();
   const date = document.getElementById("annDate").value;
   const time = document.getElementById("annTime").value;
   const desc = document.getElementById("annDesc").value.trim();
   const pinned = Boolean(document.getElementById("annPinOnOverview")?.checked);
-  if (!title) return;
+
+  if (!title) {
+    showToast("Vyplň co se bude dělat.");
+    return;
+  }
+
   data.announcements.unshift({
-    id: `ann_${Date.now()}`,
+    id: `ann_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     title,
     date,
     time,
     desc,
-    author: getCurrentActorNick() || "Člen LAP",
     pinned,
     createdAt: formatNowCzech(),
     signups: []
   });
+
   document.getElementById("annTitle").value = "";
   document.getElementById("annDate").value = "";
   document.getElementById("annTime").value = "";
   document.getElementById("annDesc").value = "";
-  if (document.getElementById("annPinOnOverview")) document.getElementById("annPinOnOverview").checked = false;
-  saveData();
-}
+  if (document.getElementById("annPinOnOverview")) {
+    document.getElementById("annPinOnOverview").checked = false;
+  }
 
-function canManageAnnouncementPin(ann) {
-  if (!isLoggedIn()) return false;
-  if (isAdmin()) return true;
-  const current = getCurrentActorNick().toLowerCase();
-  return current && (ann.author || "").toLowerCase() === current;
+  saveData();
+  showToast(pinned ? "Oznámení zveřejněno a připnuto na přehled." : "Oznámení zveřejněno.");
 }
 
 function togglePinAnnouncement(annId) {
+  if (!isAdmin()) return;
   const ann = data.announcements.find(a => a.id === annId);
-  if (!ann || !canManageAnnouncementPin(ann)) return;
+  if (!ann) return;
   ann.pinned = !ann.pinned;
   saveData();
+  showToast(ann.pinned ? "📌 Oznámení připnuto na hlavní přehled." : "Oznámení odepnuto z přehledu.");
 }
 
 function joinAnnouncement(annId, inputPrefix = "roleInput") {
   if (!isLoggedIn()) {
     openAuthModal();
+    showToast("Přihlas se, abys mohl zapsat co budeš dělat.");
     return;
   }
   const input = document.getElementById(`${inputPrefix}_${annId}`);
   const roleNote = (input?.value || "").trim() || "Zapojím se do akce";
   const ann = data.announcements.find(a => a.id === annId);
   if (!ann) return;
+
   ann.signups = ann.signups || [];
-  const nick = getCurrentActorNick() || "Hráč";
-  const idx = ann.signups.findIndex(s => s.nick.toLowerCase() === nick.toLowerCase());
+  const nick = authState.currentUser.mcNick || authState.currentUser.username;
+  const existingIdx = ann.signups.findIndex(s => s.nick.toLowerCase() === nick.toLowerCase());
   const entry = { nick, roleNote };
-  if (idx >= 0) ann.signups[idx] = entry;
-  else ann.signups.push(entry);
+
+  if (existingIdx >= 0) {
+    ann.signups[existingIdx] = entry;
+  } else {
+    ann.signups.push(entry);
+  }
+
   saveData();
+  showToast("Tvůj plán byl zapsán k oznámení.");
 }
 
 function removeAnnouncement(annId) {
   if (!isAdmin()) return;
   data.announcements = data.announcements.filter(a => a.id !== annId);
   saveData();
+  showToast("Oznámení smazáno.");
 }
 
 function buildAnnouncementCardHtml(ann, inputPrefix = "roleInput") {
-  const formattedDate = ann.date ? new Date(`${ann.date}T00:00:00`).toLocaleDateString("cs-CZ") : "Datum neuvedeno";
+  const formattedDate = ann.date
+    ? new Date(`${ann.date}T00:00:00`).toLocaleDateString("cs-CZ")
+    : "Datum neuvedeno";
   const scheduleText = `📅 ${formattedDate}${ann.time ? ` • 🕒 ${ann.time}` : ""}`;
-  const authorName = ann.author || "Člen LAP";
+
   const signupsHtml = (ann.signups && ann.signups.length > 0)
     ? ann.signups.map(s => `<span class="signup-chip"><strong>${s.nick}</strong>: ${s.roleNote}</span>`).join("")
     : `<span class="player-sub">Zatím se nikdo nezapsal.</span>`;
-  const pinBtn = canManageAnnouncementPin(ann)
+
+  const pinBtn = isAdmin()
     ? `<button type="button" class="btn ${ann.pinned ? "btn-gold" : "btn-dark"}" onclick="togglePinAnnouncement('${ann.id}')">${ann.pinned ? "📌 Připnuto" : "📌 Připnout na přehled"}</button>`
     : "";
-  const delBtn = isAdmin() ? `<button type="button" class="btn btn-red" onclick="removeAnnouncement('${ann.id}')">Smazat</button>` : "";
+
+  const delBtn = isAdmin()
+    ? `<button type="button" class="btn btn-red" onclick="removeAnnouncement('${ann.id}')">Smazat</button>`
+    : "";
 
   return `
     <div class="announcement-card ${ann.pinned ? "pinned" : ""}">
       <div class="announcement-top">
         <div>
           <h3>${ann.pinned ? "📌 " : ""}${ann.title}</h3>
-          <div class="announcement-author-badge">
-            <img src="${getMcHeadUrl(authorName, 20)}" alt="${authorName}" style="width:18px; height:18px; border-radius:4px;" onerror="this.src='https://mc-heads.net/avatar/MHF_Steve/20'" />
-            <span>Vytvořil: <strong>${authorName}</strong></span>
-          </div>
           <div class="player-sub">Vytvořeno: ${ann.createdAt || "—"}</div>
         </div>
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
@@ -1137,7 +1366,7 @@ function buildAnnouncementCardHtml(ann, inputPrefix = "roleInput") {
         <div>${signupsHtml}</div>
       </div>
       <div class="add-player-row">
-        <input type="text" id="${inputPrefix}_${ann.id}" placeholder="Co budu dělat..." />
+        <input type="text" id="${inputPrefix}_${ann.id}" placeholder="Co budu dělat (např. streakovat mid, sbírat kills...)" />
         <button type="button" class="btn btn-green" onclick="joinAnnouncement('${ann.id}', '${inputPrefix}')">✋ Zapsat plán</button>
       </div>
     </div>
@@ -1145,10 +1374,10 @@ function buildAnnouncementCardHtml(ann, inputPrefix = "roleInput") {
 }
 
 function renderAnnouncements() {
-  applyAnnouncementAuthGuard();
   const wrap = document.getElementById("announcementsList");
   const pinnedSection = document.getElementById("pinnedAnnouncementsSection");
   const pinnedList = document.getElementById("pinnedAnnouncementsList");
+
   const pinnedItems = data.announcements.filter(a => a.pinned);
   if (pinnedSection && pinnedList) {
     if (pinnedItems.length > 0) {
@@ -1159,28 +1388,40 @@ function renderAnnouncements() {
       pinnedList.innerHTML = "";
     }
   }
+
   if (!wrap) return;
-  wrap.innerHTML = data.announcements.length === 0
-    ? `<div class="admin-card"><p class="muted-text">Zatím nejsou zveřejněna žádná oznámení.</p></div>`
-    : data.announcements.map(a => buildAnnouncementCardHtml(a, "roleInput")).join("");
+
+  if (data.announcements.length === 0) {
+    wrap.innerHTML = `<div class="admin-card"><p class="muted-text">Zatím nejsou zveřejněna žádná oznámení.</p></div>`;
+    return;
+  }
+
+  wrap.innerHTML = data.announcements.map(a => buildAnnouncementCardHtml(a, "roleInput")).join("");
 }
 
+/* ADMIN */
 function renderAdmin() {
   if (!isAdmin()) return;
+
   document.getElementById("adminWeekName").value = data.weekName;
 
   const chest = getTotalChestInfo();
   const totalChestBox = document.getElementById("adminTotalChestBox");
   if (totalChestBox) {
     let chestOpts = "";
-    for (let t = 0; t <= 10; t++) chestOpts += `<option value="${t}" ${chest.totalTier === t ? "selected" : ""}>Bedna T${t}</option>`;
+    for (let t = 0; t <= 10; t++) {
+      chestOpts += `<option value="${t}" ${chest.totalTier === t ? "selected" : ""}>Bedna T${t}</option>`;
+    }
     totalChestBox.innerHTML = `
       <div>
         <strong style="color:#fbbf24; font-size:1rem;">🎁 Celková aktuální bedna: T${chest.totalTier}</strong>
         <div class="player-sub">Výpočet: ${chest.formulaText}</div>
       </div>
       <div class="admin-inputs">
-        <label>Bedna:<select onchange="setTotalChestTier(this.value)">${chestOpts}</select></label>
+        <label>
+          Bedna:
+          <select onchange="setTotalChestTier(this.value)">${chestOpts}</select>
+        </label>
         ${chest.isManual ? `<button type="button" class="btn btn-dark" onclick="resetTotalChestAuto()">Auto součet tierů</button>` : ""}
       </div>
     `;
@@ -1190,18 +1431,16 @@ function renderAdmin() {
   if (data.objectives.length === 0) {
     objWrap.innerHTML = `<p class="muted-text">Zatím nejsou přidány žádné společné objectives.</p>`;
   } else {
-    objWrap.innerHTML = data.objectives.map((rawObj, idx) => {
-      const obj = normalizeObjective(rawObj);
-      data.objectives[idx] = obj;
+    objWrap.innerHTML = data.objectives.map((obj, idx) => {
       const info = getObjectiveProgressInfo(obj);
-      const isCustomDone = obj.currentDone !== null;
+      const isCustomDone = typeof obj.currentDone === "number" && !Number.isNaN(obj.currentDone);
 
       let tierOptionsHtml = "";
       for (let t = 0; t <= 10; t++) {
         tierOptionsHtml += `<option value="${t}" ${info.activeTier === t ? "selected" : ""}>Tier T${t}</option>`;
       }
 
-      const tierEditors = obj.tiers.map((rawGoal, tIdx) => {
+      const tierEditors = (obj.tiers || EMPTY_TIERS_T0_TO_T10).map((rawGoal, tIdx) => {
         const goal = parseOptionalTierGoal(rawGoal);
         return `
           <label>
@@ -1221,25 +1460,27 @@ function renderAdmin() {
             <div class="admin-inputs">
               <label>
                 Tier:
-                <select onchange="setObjectiveActiveTier('${obj.id}', this.value)">${tierOptionsHtml}</select>
+                <select onchange="setObjectiveActiveTier('${obj.id}', this.value)">
+                  ${tierOptionsHtml}
+                </select>
               </label>
               <label>
                 Hotovo:
                 <input type="number" min="0" value="${info.doneValue}" onchange="setObjectiveDoneValue('${obj.id}', this.value)" />
               </label>
               <label>
-                Cíl (T${info.activeTier}):
+                Z kolika:
                 <input type="number" min="1" value="${info.tierGoal ?? ""}" placeholder="—" onchange="updateObjectiveTier('${obj.id}', ${info.activeTier}, this.value)" />
               </label>
               <button type="button" class="btn ${info.rewardCompleted ? "btn-gold" : "btn-dark"}" onclick="toggleObjectiveRewardCompleted('${obj.id}')">
                 ${info.rewardCompleted ? "🎁 Bedna splněna (zrušit)" : "🎁 Reward bedna splněna"}
               </button>
-              ${isCustomDone ? `<button type="button" class="btn btn-dark" onclick="resetObjectiveDoneAuto('${obj.id}')">Auto součet hráčů</button>` : ""}
-              <button type="button" class="btn btn-red" onclick="removeObjective('${obj.id}')">Smazat</button>
+              ${isCustomDone ? `<button class="btn btn-dark" onclick="resetObjectiveDoneAuto('${obj.id}')">Auto součet hráčů</button>` : ""}
+              <button class="btn btn-red" onclick="removeObjective('${obj.id}')">Smazat</button>
             </div>
           </div>
           <div class="admin-inputs" style="border-top:1px solid var(--border); padding-top:8px;">
-            <span class="player-sub" style="margin-right:4px;">Cíle T0–T10:</span>
+            <span class="player-sub" style="margin-right:4px;">Cíle všech tierů T0–T10 (prázdné = bez hodnoty):</span>
             ${tierEditors}
           </div>
         </div>
@@ -1249,21 +1490,44 @@ function renderAdmin() {
 
   const playersWrap = document.getElementById("adminPlayersList");
   const ranks = ["Member", "Elder", "Co-leader", "Leader"];
+
   playersWrap.innerHTML = data.players.map(p => {
     const rankOpts = ranks.map(r => `<option value="${r}" ${p.rank === r ? "selected" : ""}>${r}</option>`).join("");
     const inputsHtml = data.objectives.length
-      ? data.objectives.map(obj => `<label>${obj.title} (${obj.unit}):<input type="number" min="0" value="${getPlayerContrib(p, obj.id)}" onchange="updatePlayerContrib(${p.id}, '${obj.id}', this.value)" /></label>`).join("")
+      ? data.objectives.map(obj => {
+          const val = getPlayerContrib(p, obj.id);
+          return `
+            <label>
+              ${obj.title} (${obj.unit}):
+              <input type="number" min="0" value="${val}" onchange="updatePlayerContrib(${p.id}, '${obj.id}', this.value)" />
+            </label>
+          `;
+        }).join("")
       : "";
+
     return `
       <div class="admin-player-item">
         <div style="display:flex; align-items:center; gap:10px;">
           <img class="skin-head" style="width:32px; height:32px;" src="${getMcHeadUrl(p.nick, 32)}" alt="${p.nick}" onerror="this.src='https://mc-heads.net/avatar/MHF_Steve/32'" />
-          <div><strong>${p.nick}</strong><span class="rank-pill rank-${p.rank}" style="margin-left:6px;">${p.rank}</span><span class="player-sub">Prestige ${p.prestige}</span></div>
+          <div>
+            <strong>${p.nick}</strong>
+            <span class="rank-pill rank-${p.rank}" style="margin-left:6px;">${p.rank}</span>
+            <span class="player-sub">Prestige ${p.prestige}</span>
+          </div>
         </div>
         <div class="admin-inputs">
-          <label>Rank:<select onchange="updatePlayerMeta(${p.id}, 'rank', this.value)">${rankOpts}</select></label>
-          <label>Prestige:<input type="number" min="0" max="100" value="${p.prestige}" onchange="updatePlayerMeta(${p.id}, 'prestige', this.value)" /></label>
-          <label>Týdenní cíl:<input type="number" min="0" value="${p.weeklyGoal || 0}" onchange="updatePlayerMeta(${p.id}, 'weeklyGoal', this.value)" /></label>
+          <label>
+            Rank:
+            <select onchange="updatePlayerMeta(${p.id}, 'rank', this.value)">${rankOpts}</select>
+          </label>
+          <label>
+            Prestige:
+            <input type="number" min="0" max="100" value="${p.prestige}" onchange="updatePlayerMeta(${p.id}, 'prestige', this.value)" />
+          </label>
+          <label>
+            Týdenní cíl:
+            <input type="number" min="0" value="${p.weeklyGoal || 0}" onchange="updatePlayerMeta(${p.id}, 'weeklyGoal', this.value)" />
+          </label>
           ${inputsHtml}
           <button class="btn btn-red" onclick="removePlayer(${p.id})">✕</button>
         </div>
@@ -1283,57 +1547,88 @@ function setTotalChestTier(tierVal) {
   if (!isAdmin()) return;
   data.totalChestOverride = Math.min(10, Math.max(0, parseInt(tierVal, 10) ?? 0));
   saveData();
+  showToast(`Celková bedna nastavena na T${data.totalChestOverride}.`);
 }
 
 function resetTotalChestAuto() {
   if (!isAdmin()) return;
   data.totalChestOverride = null;
   saveData();
+  showToast("Celková bedna vrácena na automatický součet tierů.");
 }
 
 function setObjectiveActiveTier(objId, tierVal) {
   if (!isAdmin()) return;
   const tierNum = Math.min(10, Math.max(0, parseInt(tierVal, 10) ?? 0));
-  const obj = data.objectives.find(o => String(o.id) === String(objId));
+  const obj = data.objectives.find(o => o.id === objId);
   if (obj) {
     obj.activeTier = tierNum;
-    obj.rewardCompleted = false;
     saveData();
+    showToast(`Nastaven Tier T${tierNum} pro: ${obj.title}`);
   }
 }
 
 function setObjectiveDoneValue(objId, val) {
   if (!isAdmin()) return;
   const num = Math.max(0, parseInt(val, 10) || 0);
-  const obj = data.objectives.find(o => String(o.id) === String(objId));
+  const obj = data.objectives.find(o => o.id === objId);
   if (obj) {
     obj.currentDone = num;
     saveData();
+    showToast(`Aktualizováno splněno: ${num.toLocaleString("cs-CZ")} ${obj.unit}`);
   }
 }
 
 function toggleObjectiveRewardCompleted(objId) {
   if (!isAdmin()) return;
-  const obj = data.objectives.find(o => String(o.id) === String(objId));
+  const obj = data.objectives.find(o => o.id === objId);
   if (obj) {
-    obj.rewardCompleted = !obj.rewardCompleted;
+    const nextCompleted = !obj.rewardCompleted;
+    obj.rewardCompleted = nextCompleted;
+    const idx = Math.min(10, Math.max(0, Number(obj.activeTier) ?? 0));
+    if (nextCompleted) {
+      const goal = parseOptionalTierGoal(obj.tiers?.[idx]);
+      if (goal) {
+        obj.currentDone = Math.max(Number(obj.currentDone) || 0, goal);
+      }
+      if (idx < 10 && confirm(`Reward bedna u "${obj.title}" označena jako splněná. Posunout tier na T${idx + 1}?`)) {
+        obj.activeTier = idx + 1;
+        obj.rewardCompleted = false;
+      }
+    }
     saveData();
+    showToast(obj.rewardCompleted
+      ? `🎁 Reward bedna u ${obj.title} označena jako splněná!`
+      : `Stav reward bedny u ${obj.title} aktualizován.`);
   }
 }
 
 function markAllObjectivesRewardCompleted() {
   if (!isAdmin()) return;
-  data.objectives.forEach(obj => { obj.rewardCompleted = true; });
+  if (data.objectives.length === 0) {
+    showToast("Žádné objectives k označení.");
+    return;
+  }
+  data.objectives.forEach(obj => {
+    obj.rewardCompleted = true;
+    const idx = Math.min(10, Math.max(0, Number(obj.activeTier) ?? 0));
+    const goal = parseOptionalTierGoal(obj.tiers?.[idx]);
+    if (goal) {
+      obj.currentDone = Math.max(Number(obj.currentDone) || 0, goal);
+    }
+  });
   saveData();
+  showToast("🎁 Všechny objectives označeny jako splněné přes Reward bednu!");
 }
 
 function resetObjectiveDoneAuto(objId) {
   if (!isAdmin()) return;
-  const obj = data.objectives.find(o => String(o.id) === String(objId));
+  const obj = data.objectives.find(o => o.id === objId);
   if (obj) {
     obj.currentDone = null;
     obj.rewardCompleted = false;
     saveData();
+    showToast("Vráceno na automatický součet hráčů.");
   }
 }
 
@@ -1341,11 +1636,13 @@ function updateObjectiveTier(objId, tierIndex, val) {
   if (!isAdmin()) return;
   const idx = Math.min(10, Math.max(0, Number(tierIndex) || 0));
   const parsedGoal = parseOptionalTierGoal(val);
-  const obj = data.objectives.find(o => String(o.id) === String(objId));
-  if (obj) {
-    if (!Array.isArray(obj.tiers) || obj.tiers.length !== 11) obj.tiers = [...EMPTY_TIERS_T0_TO_T10];
+  const obj = data.objectives.find(o => o.id === objId);
+  if (obj && Array.isArray(obj.tiers)) {
     obj.tiers[idx] = parsedGoal;
     saveData();
+    showToast(parsedGoal
+      ? `Cíl T${idx} upraven na ${parsedGoal.toLocaleString("cs-CZ")}.`
+      : `Cíl T${idx} nastaven bez hodnoty.`);
   }
 }
 
@@ -1353,24 +1650,48 @@ function addObjective() {
   if (!isAdmin()) return;
   const title = document.getElementById("newObjTitle").value.trim();
   const unit = document.getElementById("newObjUnit").value.trim() || "bodů";
-  if (!title) return;
+
   const tiers = [];
-  for (let t = 0; t <= 10; t++) tiers.push(parseOptionalTierGoal(document.getElementById(`tierGoal_${t}`)?.value));
-  data.objectives.push(normalizeObjective({ id: `obj_${Date.now()}`, title, unit, tiers, activeTier: 0, currentDone: null, rewardCompleted: false }));
+  for (let t = 0; t <= 10; t++) {
+    tiers.push(parseOptionalTierGoal(document.getElementById(`tierGoal_${t}`)?.value));
+  }
+
+  if (!title) {
+    showToast("Vyplň název objective.");
+    return;
+  }
+
+  data.objectives.push({
+    id: `obj_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    title,
+    unit,
+    tiers,
+    activeTier: 0,
+    currentDone: null,
+    rewardCompleted: false
+  });
+
   document.getElementById("newObjTitle").value = "";
   document.getElementById("newObjUnit").value = "";
   for (let t = 0; t <= 10; t++) {
     const el = document.getElementById(`tierGoal_${t}`);
     if (el) el.value = "";
   }
+
   saveData();
+  showToast("Společný objective (T0–T10) přidán.");
 }
 
 function removeObjective(objId) {
   if (!isAdmin()) return;
-  data.objectives = data.objectives.filter(o => String(o.id) !== String(objId));
-  data.players.forEach(p => { if (p.contrib && objId in p.contrib) delete p.contrib[objId]; });
+  data.objectives = data.objectives.filter(o => o.id !== objId);
+  data.players.forEach(p => {
+    if (p.contrib && objId in p.contrib) {
+      delete p.contrib[objId];
+    }
+  });
   saveData();
+  showToast("Objective odebrán.");
 }
 
 function addPlayer() {
@@ -1380,21 +1701,38 @@ function addPlayer() {
   const prestige = Math.max(0, parseInt(document.getElementById("newPrestige").value, 10) || 1);
   const weeklyGoal = Math.max(0, parseInt(document.getElementById("newWeeklyGoal").value, 10) || 0);
   if (!nick) return;
-  data.players.push({ id: Date.now(), nick, rank, prestige, weeklyGoal, contrib: {} });
+
+  data.players.push({
+    id: Date.now(),
+    nick,
+    rank,
+    prestige,
+    weeklyGoal,
+    contrib: {}
+  });
+
   document.getElementById("newNick").value = "";
   document.getElementById("newPrestige").value = "";
   document.getElementById("newWeeklyGoal").value = "";
   saveData();
+  showToast(`Hráč ${nick} přidán!`);
 }
 
 function updatePlayerMeta(playerId, field, val) {
   if (!isAdmin()) return;
   const player = data.players.find(p => p.id === playerId);
   if (!player) return;
-  if (field === "rank") player.rank = val;
-  else if (field === "prestige") player.prestige = Math.max(0, Math.min(100, parseInt(val, 10) || 0));
-  else if (field === "weeklyGoal") player.weeklyGoal = Math.max(0, parseInt(val, 10) || 0);
+
+  if (field === "rank") {
+    player.rank = val;
+  } else if (field === "prestige") {
+    player.prestige = Math.max(0, Math.min(100, parseInt(val, 10) || 0));
+  } else if (field === "weeklyGoal") {
+    player.weeklyGoal = Math.max(0, parseInt(val, 10) || 0);
+  }
+
   saveData();
+  showToast(`Upraveno u hráče ${player.nick}.`);
 }
 
 function updatePlayerContrib(playerId, objId, val) {
@@ -1412,42 +1750,66 @@ function removePlayer(id) {
   if (!isAdmin()) return;
   data.players = data.players.filter(p => p.id !== id);
   saveData();
+  showToast("Hráč odebrán.");
 }
 
 function closeWeek() {
-  if (!isAdmin() || !confirm("Uzavřít tento týden do historie a vynulovat týdenní příspěvky hráčů?")) return;
+  if (!isAdmin()) return;
+  if (!confirm("Uzavřít tento týden do historie a vynulovat týdenní příspěvky hráčů?")) return;
+
   const chest = getTotalChestInfo();
   const objectivesSnapshot = data.objectives.map(obj => {
     const info = getObjectiveProgressInfo(obj);
-    return { ...obj, guildTotal: info.doneValue, reachedTier: info.reachedTier };
+    return {
+      ...obj,
+      guildTotal: info.doneValue,
+      reachedTier: info.reachedTier
+    };
   });
+
   data.history.unshift({
-    id: `week_${Date.now()}`,
+    id: `week_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     weekName: data.weekName,
     date: new Date().toLocaleDateString("cs-CZ"),
     totalChestTier: chest.totalTier,
     objectives: objectivesSnapshot,
-    players: data.players.map(p => ({
-      nick: p.nick,
-      rank: p.rank,
-      prestige: p.prestige,
-      weeklyGoal: p.weeklyGoal || 0,
-      totalUnits: getPlayerTotalUnits(p),
-      sharePct: getPlayerOverallSharePct(p),
-      contrib: deepCopy(p.contrib || {})
-    }))
+    players: data.players
+      .map(p => ({
+        nick: p.nick,
+        rank: p.rank,
+        prestige: p.prestige,
+        weeklyGoal: p.weeklyGoal || 0,
+        totalUnits: getPlayerTotalUnits(p),
+        sharePct: getPlayerOverallSharePct(p),
+        contrib: structuredClone(p.contrib || {})
+      }))
+      .sort((a, b) => {
+        if (b.totalUnits !== a.totalUnits) return b.totalUnits - a.totalUnits;
+        return b.sharePct - a.sharePct;
+      })
   });
-  data.players.forEach(p => { p.contrib = {}; });
-  data.objectives.forEach(obj => { obj.activeTier = 0; obj.currentDone = null; obj.rewardCompleted = false; });
+
+  data.players.forEach(p => {
+    p.contrib = {};
+  });
+  data.objectives.forEach(obj => {
+    obj.activeTier = 0;
+    obj.currentDone = null;
+    obj.rewardCompleted = false;
+  });
   data.totalChestOverride = null;
+
   data.weekName = `Týden #${data.history.length + 1} • LAP The Pit`;
   saveData();
+  showToast("Týden uložen do historie!");
 }
 
 function deleteHistoryWeek(historyId) {
-  if (!isAdmin() || !confirm("Opravdu smazat tento uzavřený týden z historie?")) return;
+  if (!isAdmin()) return;
+  if (!confirm("Opravdu smazat tento uzavřený týden z historie?")) return;
   data.history = data.history.filter(h => h.id !== historyId);
   saveData();
+  showToast("Týden smazán z historie.");
 }
 
 function renderHistory() {
@@ -1456,26 +1818,43 @@ function renderHistory() {
     wrap.innerHTML = `<p class="muted-text" style="text-align:center;">Zatím žádné uzavřené týdny.</p>`;
     return;
   }
-  wrap.innerHTML = data.history.map(h => `
-    <div class="admin-card">
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
-        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <strong style="color:var(--accent);">${h.weekName}</strong>
-          <span class="obj-badge reward">🎁 Celková bedna: T${h.totalChestTier ?? 0}</span>
+
+  wrap.innerHTML = data.history.map(h => {
+    const chestLabel = `🎁 Celková bedna: T${h.totalChestTier ?? 0}`;
+    const objsSummary = h.objectives && h.objectives.length > 0
+      ? h.objectives.map(o => `${o.title}: ${o.guildTotal ?? 0} ${o.unit} (Tier T${o.reachedTier ?? 0})`).join(" • ")
+      : "Bez uložených objectives";
+
+    return `
+      <div class="admin-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <strong style="color:var(--accent);">${h.weekName}</strong>
+            <span class="obj-badge reward">${chestLabel}</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span class="player-sub">${h.date}</span>
+            ${isAdmin() ? `<button type="button" class="btn btn-red" onclick="deleteHistoryWeek('${h.id}')">🗑️ Smazat týden</button>` : ""}
+          </div>
         </div>
-        <div style="display:flex; align-items:center; gap:10px;">
-          <span class="player-sub">${h.date}</span>
-          ${isAdmin() ? `<button type="button" class="btn btn-red" onclick="deleteHistoryWeek('${h.id}')">🗑️ Smazat týden</button>` : ""}
-        </div>
+        <div class="player-sub" style="margin-bottom:12px;">${objsSummary}</div>
+        ${h.players.map((p, idx) => {
+          const breakdown = h.objectives && h.objectives.length > 0
+            ? h.objectives.map(o => `${o.title}: ${p.contrib?.[o.id] || 0} ${o.unit}`).join(" | ")
+            : `Celkem: ${(p.totalUnits ?? 0).toLocaleString("cs-CZ")}`;
+          const shareLabel = h.objectives && h.objectives.length > 0
+            ? `${p.sharePct} % podíl`
+            : `${(p.totalUnits ?? 0).toLocaleString("cs-CZ")} bodů`;
+          return `
+            <div style="display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-top:1px solid var(--border); font-size:0.88rem; flex-wrap:wrap;">
+              <span>#${idx + 1} <strong>${p.nick}</strong> (${p.rank} • P${p.prestige})</span>
+              <span>${breakdown} → <strong style="color:var(--accent);">${shareLabel}</strong></span>
+            </div>
+          `;
+        }).join("")}
       </div>
-      ${(h.players || []).map((p, idx) => `
-        <div style="display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-top:1px solid var(--border); font-size:0.88rem; flex-wrap:wrap;">
-          <span>#${idx + 1} <strong>${p.nick}</strong> (${p.rank} • P${p.prestige})</span>
-          <span><strong style="color:var(--accent);">${p.sharePct ?? 0} % podíl</strong></span>
-        </div>
-      `).join("")}
-    </div>
-  `).join("");
+    `;
+  }).join("");
 }
 
 function exportBackupJson() {
@@ -1487,6 +1866,7 @@ function exportBackupJson() {
   a.download = `lap-the-pit-zaloha-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
+  showToast("Záloha JSON stažena.");
 }
 
 function triggerBackupImport() {
@@ -1498,12 +1878,17 @@ function importBackupJson(event) {
   if (!isAdmin()) return;
   const file = event.target.files?.[0];
   if (!file) return;
+
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      data = hydrateData(JSON.parse(String(reader.result)));
+      const parsed = JSON.parse(String(reader.result));
+      data = hydrateData(parsed);
       saveData(false);
-    } catch {}
+      showToast("Záloha úspěšně nahrána!");
+    } catch {
+      showToast("Neplatný JSON soubor zálohy.");
+    }
     event.target.value = "";
   };
   reader.readAsText(file);
@@ -1511,14 +1896,20 @@ function importBackupJson(event) {
 
 function copyAllCredentials() {
   if (!isAdmin()) return;
-  const lines = ACCOUNTS.map(a => `${a.mcNick} (${a.username}) -> ${a.password}`).join("\n");
-  navigator.clipboard.writeText(lines).then(() => showToast("Zkopírováno!"));
+  const lines = ACCOUNTS.map(
+    a => `${a.mcNick} (login: ${a.username}, role: ${a.role}) -> Heslo: ${a.password}`
+  ).join("\n");
+  navigator.clipboard.writeText(lines).then(() => {
+    showToast("Přehled účtů a hesel zkopírován!");
+  });
 }
 
 function copyShareLink() {
   const encoded = btoa(encodeURIComponent(JSON.stringify(data)));
   const url = `${window.location.origin}${window.location.pathname}#pit=${encoded}`;
-  navigator.clipboard.writeText(url).then(() => showToast("Odkaz zkopírován!"));
+  navigator.clipboard.writeText(url).then(() => {
+    showToast("Sdílecí odkaz zkopírován!");
+  });
 }
 
 function showToast(msg) {
