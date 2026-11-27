@@ -1090,7 +1090,7 @@ function renderTotalChestBanners() {
   const chest = getTotalChestInfo();
   const bannerHtml = `
     <div>
-      <div class="player-sub mt-0">SPOLEČNÁ ODMĚNA GUILDY</div>
+      <div class="player-sub mt-0">🎄 SPOLEČNÁ VÁNOČNÍ ODMĚNA GUILDY</div>
       <div class="player-name mt-2">Celková aktuální bedna</div>
       <div class="player-sub">${escapeHtml(chest.formulaText)}${chest.isManual ? " • ručně nastaveno" : " • automatický součet tierů"}</div>
     </div>
