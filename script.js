@@ -32,15 +32,12 @@ const PANTS_COLORS = [
 ];
 
 const DEFAULT_ENCHANT_CATALOG = [
-  // Common (šedá)
   { id: "enc_prot", name: "Protection", rarity: "common" },
   { id: "enc_billy", name: "Billy", rarity: "common" },
   { id: "enc_dia_allergy", name: "Diamond Allergy", rarity: "common" },
   { id: "enc_criket", name: "Criket", rarity: "common" },
   { id: "enc_pebble", name: "Pebble", rarity: "common" },
   { id: "enc_life_saver", name: "Life Saver", rarity: "common" },
-
-  // Rare (modrá)
   { id: "enc_solitude", name: "Solitude", rarity: "rare" },
   { id: "enc_booboo", name: "Boo-Boo", rarity: "rare" },
   { id: "enc_counter", name: "Counter-Offensive", rarity: "rare" },
@@ -48,8 +45,6 @@ const DEFAULT_ENCHANT_CATALOG = [
   { id: "enc_ring_armor", name: "Ring Armor", rarity: "rare" },
   { id: "enc_coverage", name: "Coverage", rarity: "rare" },
   { id: "enc_speedrunner", name: "Speedrunner", rarity: "rare" },
-
-  // Epic (fialová)
   { id: "enc_not_glad", name: "\"Not\"Gladiator", rarity: "epic" },
   { id: "enc_excess", name: "Excess", rarity: "epic" },
   { id: "enc_antivirus", name: "Antivirus", rarity: "epic" },
@@ -1182,7 +1177,7 @@ function buildPlayerStatsMiniHtml(player) {
     <div class="player-stats-mini">
       <span class="stat-chip">💀 Smrti: <strong>${(player.deaths || 0).toLocaleString("cs-CZ")}</strong></span>
       <span class="stat-chip">🔮 Sigils: <strong>${(player.sigils || 0).toLocaleString("cs-CZ")}</strong></span>
-      <span class="stat-chip">💬 ${commentCount}</span>
+      <span class="stat-chip">💬 Komentáře: <strong>${commentCount}</strong></span>
     </div>
   `;
 }
@@ -1229,15 +1224,14 @@ function canDeletePlayerComment(comment) {
   return current && String(comment.author || "").toLowerCase() === current;
 }
 
-function addPlayerComment(e, playerId) {
-  e.preventDefault();
+function addPlayerCommentFromInput(playerId, inputId) {
   if (!isLoggedIn()) {
     openAuthModal();
     showToast("Pro napsání komentáře se musíš přihlásit.");
     return;
   }
 
-  const input = document.getElementById("playerCommentInput");
+  const input = document.getElementById(inputId);
   const text = (input?.value || "").trim();
   if (!text) {
     showToast("Napiš text komentáře.");
@@ -1256,8 +1250,15 @@ function addPlayerComment(e, playerId) {
   });
 
   saveData();
-  openPlayerDetailModal(playerId, true);
-  showToast("Komentář přidán.");
+  if (activePlayerModalId === playerId) {
+    openPlayerDetailModal(playerId, true);
+  }
+  showToast("Veřejný komentář přidán.");
+}
+
+function addPlayerComment(e, playerId) {
+  e.preventDefault();
+  addPlayerCommentFromInput(playerId, "playerCommentInput");
 }
 
 function deletePlayerComment(playerId, commentId) {
@@ -1268,7 +1269,9 @@ function deletePlayerComment(playerId, commentId) {
 
   player.comments = player.comments.filter(c => c.id !== commentId);
   saveData();
-  openPlayerDetailModal(playerId, true);
+  if (activePlayerModalId === playerId) {
+    openPlayerDetailModal(playerId, true);
+  }
   showToast("Komentář smazán.");
 }
 
@@ -1463,6 +1466,20 @@ function renderRoster() {
   rosterGrid.innerHTML = list.map(p => {
     const isMe = activeNick && p.nick.toLowerCase() === activeNick;
     const safeRank = ["Leader", "Co-leader", "Elder", "Member"].includes(p.rank) ? p.rank : "Member";
+    const comments = Array.isArray(p.comments) ? p.comments : [];
+    const latestCommentHtml = comments.length > 0
+      ? `<div class="roster-latest-comment">💬 <strong>${escapeHtml(comments[0].author)}:</strong> ${escapeHtml(comments[0].text)}</div>`
+      : "";
+
+    const quickCommentHtml = isLoggedIn()
+      ? `
+        <div class="roster-quick-comment" onclick="event.stopPropagation()">
+          <input type="text" id="rosterCmt_${p.id}" maxlength="240" placeholder="Napsat veřejný komentář..." />
+          <button type="button" class="btn btn-green btn-sm" onclick="addPlayerCommentFromInput(${p.id}, 'rosterCmt_${p.id}')">💬</button>
+        </div>
+      `
+      : "";
+
     return `
       <div class="roster-card" onclick="openPlayerDetailModal(${p.id})">
         <div class="roster-card-top">
@@ -1479,6 +1496,8 @@ function renderRoster() {
           <div class="roster-share-badge">${data.objectives.length ? `${p.sharePct} %` : "—"}</div>
         </div>
         ${buildPlayerContribHtml(p)}
+        ${latestCommentHtml}
+        ${quickCommentHtml}
       </div>
     `;
   }).join("");
