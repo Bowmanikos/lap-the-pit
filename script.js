@@ -1018,26 +1018,26 @@ function getObjectiveProgressInfo(obj) {
   };
 }
 
-function buildPercentageRulerHtml(info, unit = "bodů") {
+function buildRulerHtml(info, unit = "bodů") {
   const hasGoal = Boolean(info.tierGoal) || info.rewardCompleted;
-  const displayPct = hasGoal ? `${info.pct} %` : "—";
+  const pctText = hasGoal ? `${info.pct} %` : "—";
   const markerPos = hasGoal ? Math.min(100, Math.max(0, info.pct)) : 0;
 
-  const statusCaption = info.tierGoal
-    ? `${info.doneValue.toLocaleString("cs-CZ")} / ${info.tierGoal.toLocaleString("cs-CZ")} ${escapeHtml(unit)} • Chybí: <strong>${info.missingInCurrentTier.toLocaleString("cs-CZ")}</strong>`
-    : `${info.doneValue.toLocaleString("cs-CZ")} ${escapeHtml(unit)} • Cíl nezadán`;
+  const statusText = info.tierGoal
+    ? `Splněno: <strong>${info.doneValue.toLocaleString("cs-CZ")}</strong> / <strong>${info.tierGoal.toLocaleString("cs-CZ")}</strong> ${escapeHtml(unit)} • Chybí: <strong>${info.missingInCurrentTier.toLocaleString("cs-CZ")}</strong>`
+    : `Splněno: <strong>${info.doneValue.toLocaleString("cs-CZ")}</strong> ${escapeHtml(unit)} • Cíl T${info.activeTier} nezadán`;
 
   return `
-    <div class="pct-ruler-wrap" style="margin-top:10px;">
-      <div class="pct-ruler-header" style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:6px;gap:8px;flex-wrap:wrap;">
-        <span>${statusCaption}</span>
-        <strong style="color:#facc15;font-size:13px;">${displayPct}</strong>
+    <div class="ruler-box">
+      <div class="ruler-top">
+        <span>${statusText}</span>
+        <span class="ruler-pct">${pctText}</span>
       </div>
-      <div class="pct-ruler-track" style="position:relative;height:14px;border-radius:999px;background:rgba(15,23,42,0.85);border:1px solid rgba(148,163,184,0.28);overflow:visible;">
-        <div style="height:100%;width:${markerPos}%;border-radius:999px;background:${info.rewardCompleted ? "linear-gradient(90deg,#f59e0b,#facc15)" : "linear-gradient(90deg,#22c55e,#4ade80)"};transition:width 0.25s ease;"></div>
-        <div title="${displayPct}" style="position:absolute;top:-5px;left:${markerPos}%;transform:translateX(-50%);width:4px;height:24px;border-radius:2px;background:#ffffff;box-shadow:0 0 8px rgba(255,255,255,0.9);pointer-events:none;"></div>
+      <div class="ruler-track">
+        <div class="ruler-fill ${info.rewardCompleted ? "done" : ""}" style="width:${markerPos}%"></div>
+        <div class="ruler-needle" style="left:${markerPos}%" title="${pctText}"></div>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;opacity:0.7;margin-top:5px;">
+      <div class="ruler-ticks">
         <span>0%</span>
         <span>25%</span>
         <span>50%</span>
@@ -1174,7 +1174,7 @@ function renderObjectives() {
           </div>
           <div class="obj-goal-pill">${escapeHtml(ratioText)}</div>
         </div>
-        ${buildPercentageRulerHtml(info, obj.unit)}
+        ${buildRulerHtml(info, obj.unit)}
       </div>
     `;
   }).join("");
@@ -1188,9 +1188,9 @@ function renderObjectives() {
         </div>
         <h3>${escapeHtml(obj.title)}</h3>
         <p class="muted-text mb-6">
-          Aktuální tier: <strong>T${info.activeTier}</strong> • Splněno: <strong>${info.doneValue.toLocaleString("cs-CZ")}</strong> ${info.tierGoal ? `/ <strong>${info.tierGoal.toLocaleString("cs-CZ")}</strong>` : ""} ${escapeHtml(obj.unit)}
+          Aktuální tier: <strong>T${info.activeTier}</strong> • Jednotka: <strong>${escapeHtml(obj.unit)}</strong>
         </p>
-        ${buildPercentageRulerHtml(info, obj.unit)}
+        ${buildRulerHtml(info, obj.unit)}
       </div>
     `;
   }).join("");
@@ -1342,7 +1342,7 @@ function openPlayerDetailModal(playerId, preserveInputValue = false) {
               <img src="${getMcHeadUrl(c.author, 20)}" alt="${escapeHtml(c.author)}" loading="lazy" onerror="this.src='${FALLBACK_AVATAR}'" />
               ${escapeHtml(c.author)}
             </span>
-            <div class="admin-inputs">
+            <div class="admin-inputs mt-0">
               <span>${escapeHtml(c.createdAt)}</span>
               ${canDeletePlayerComment(c)
                 ? `<button type="button" class="btn btn-red btn-sm" onclick="deletePlayerComment(${player.id}, '${escapeHtml(c.id)}')">✕</button>`
@@ -1901,7 +1901,7 @@ function renderPolls() {
   wrap.innerHTML = polls.map(p => buildPollCardHtml(p)).join("");
 }
 
-/* ADMIN — JEDNODUCHÉ ZADÁNÍ: NÁZEV, TIER, KOLIK JE, CELKOVĚ KOLIK JE TŘEBA + RYSKA S % */
+/* ADMIN — NÁZEV, TIER, KOLIK JE, CELKOVĚ KOLIK JE TŘEBA + RYSKA S % */
 function renderAdmin() {
   if (!isAdmin()) return;
 
@@ -1919,7 +1919,7 @@ function renderAdmin() {
         <strong class="chest-admin-title">🎁 Celková aktuální bedna: T${chest.totalTier}</strong>
         <div class="player-sub">Výpočet: ${escapeHtml(chest.formulaText)}</div>
       </div>
-      <div class="admin-inputs">
+      <div class="admin-inputs mt-0">
         <label>
           Bedna:
           <select onchange="setTotalChestTier(this.value)">${chestOpts}</select>
@@ -1944,10 +1944,10 @@ function renderAdmin() {
 
       return `
         <div class="admin-player-item admin-obj-card ${info.rewardCompleted ? "reward-done" : ""}" id="adminObjCard_${safeId}">
-          <div class="card-header-row" style="gap:10px;flex-wrap:wrap;">
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <div class="card-header-row">
+            <div class="admin-inputs mt-0">
               <strong>#${idx + 1}</strong>
-              <label style="margin:0;">
+              <label>
                 Název objective:
                 <input
                   id="objTitleInput_${safeId}"
@@ -1959,7 +1959,7 @@ function renderAdmin() {
               </label>
             </div>
 
-            <div class="admin-inputs" style="gap:8px;flex-wrap:wrap;">
+            <div class="admin-inputs mt-0">
               <label>
                 Tier:
                 <select id="objTierSelect_${safeId}" onchange="setObjectiveActiveTier('${safeId}', this.value)">
@@ -1996,7 +1996,7 @@ function renderAdmin() {
           </div>
 
           <div id="adminObjRuler_${safeId}">
-            ${buildPercentageRulerHtml(info, obj.unit)}
+            ${buildRulerHtml(info, obj.unit)}
           </div>
         </div>
       `;
@@ -2121,7 +2121,7 @@ function updateObjectiveSimpleLive(objId) {
   const info = getObjectiveProgressInfo(obj);
   const rulerBox = document.getElementById(`adminObjRuler_${objId}`);
   if (rulerBox) {
-    rulerBox.innerHTML = buildPercentageRulerHtml(info, obj.unit);
+    rulerBox.innerHTML = buildRulerHtml(info, obj.unit);
   }
 
   renderObjectives();
