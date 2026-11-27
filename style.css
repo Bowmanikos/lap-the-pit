@@ -370,6 +370,141 @@ body {
   white-space: nowrap;
 }
 
+/* PANTS TAB */
+.pants-lock-card {
+  text-align: center;
+  padding: 36px 24px;
+}
+
+.pants-lock-icon {
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 14px;
+  border-radius: 14px;
+  background: var(--bg-inner);
+  border: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+  font-size: 1.5rem;
+}
+
+.pants-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 18px;
+}
+
+.pants-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.swatch-red { background: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.5); }
+.swatch-green { background: #22c55e; box-shadow: 0 0 8px rgba(34, 197, 94, 0.5); }
+.swatch-blue { background: #3b82f6; box-shadow: 0 0 8px rgba(59, 130, 246, 0.5); }
+.swatch-yellow { background: #eab308; box-shadow: 0 0 8px rgba(234, 179, 8, 0.5); }
+
+.pants-status-box {
+  background: var(--bg-inner);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  margin-bottom: 12px;
+}
+
+.pants-status-box.hit {
+  border-color: var(--accent-border);
+  background: rgba(21, 49, 34, 0.7);
+}
+
+.pants-status-box.miss {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.pants-stats-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.pants-item-card {
+  background: var(--bg-inner);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.pants-item-card.color-red { border-top: 4px solid #ef4444; }
+.pants-item-card.color-green { border-top: 4px solid #22c55e; }
+.pants-item-card.color-blue { border-top: 4px solid #3b82f6; }
+.pants-item-card.color-yellow { border-top: 4px solid #eab308; }
+
+.rarity-pill {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+/* Common = šedá, Rare = modrá, Epic = fialová */
+.rarity-common {
+  background: rgba(156, 163, 175, 0.18);
+  color: #d1d5db;
+  border: 1px solid rgba(156, 163, 175, 0.4);
+}
+
+.rarity-rare {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.45);
+}
+
+.rarity-epic {
+  background: rgba(168, 85, 247, 0.22);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.48);
+}
+
+.enchant-name-common { color: #d1d5db; }
+.enchant-name-rare { color: #60a5fa; }
+.enchant-name-epic { color: #c084fc; }
+
+.enchant-line {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 11px;
+  margin-top: 8px;
+}
+
+.enchant-line.border-common { border-left: 3px solid #9ca3af; }
+.enchant-line.border-rare { border-left: 3px solid #3b82f6; }
+.enchant-line.border-epic { border-left: 3px solid #a855f7; }
+
+.enchant-line-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+}
+
+.enchant-desc {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
 /* SEARCH & SORT */
 .controls-row {
   display: flex;
