@@ -3,11 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LAP The Pit Guild • Přehled &amp; Žebříček</title>
+  <title>LAP The Pit Guild • Vánoční Přehled</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div id="snowfallLayer" class="snowfall-layer" aria-hidden="true"></div>
+  <div class="holiday-lights" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span><span></span><span></span>
+  </div>
 
   <div class="wrap">
     <header class="card header-card">
@@ -15,6 +19,7 @@
         <div class="brand">
           <div class="brand-badge">🎄</div>
           <div>
+            <div class="holiday-pill">❄️ ZIMNÍ / VÁNOČNÍ EDICE • LAP THE PIT</div>
             <h1>LAP THE PIT GUILD</h1>
             <p class="subtitle" id="weekSubtitle">Týden #1 • LAP The Pit • mc.survival-games.cz</p>
           </div>
@@ -32,7 +37,7 @@
       </div>
 
       <nav class="nav-tabs" role="tablist" aria-label="Hlavní navigace">
-        <button type="button" class="nav-tab active" data-tab="overview">📊 Přehled</button>
+        <button type="button" class="nav-tab active" data-tab="overview">🎄 Přehled</button>
         <button type="button" class="nav-tab" data-tab="players">👥 Seznam hráčů</button>
         <button type="button" class="nav-tab" data-tab="objectives">🎯 Objectives</button>
         <button type="button" class="nav-tab" data-tab="pants">👖 Pants</button>
@@ -47,7 +52,7 @@
     <section id="tab-overview" class="tab-content active">
       <div class="section-head">
         <div>
-          <h2>Společné guildovní objectives</h2>
+          <h2>🎁 Společné vánoční objectives guildy</h2>
           <p class="muted-text mt-2">Aktuální stav plnění, tiery T0–T10 a procentuální ryska splnění</p>
         </div>
         <span class="last-updated-badge" id="overviewLastUpdated">🕒 Poslední aktualizace: —</span>
@@ -116,7 +121,7 @@
     <section id="tab-objectives" class="tab-content">
       <div class="section-head">
         <div>
-          <h2>Detail společných objectives</h2>
+          <h2>🎯 Detail společných objectives</h2>
           <p class="muted-text mt-2" id="objTabSubtitle">Týden #1 • LAP The Pit</p>
         </div>
         <span class="last-updated-badge" id="objLastUpdated">🕒 Poslední aktualizace: —</span>
@@ -232,7 +237,7 @@
         <div class="form-grid">
           <div class="field">
             <label for="annTitle">Co se bude dělat</label>
-            <input type="text" id="annTitle" placeholder="Např. Společný event streak v Pit" />
+            <input type="text" id="annTitle" placeholder="Např. Vánoční streak event v Pit" />
           </div>
           <div class="field">
             <label for="annDate">Datum</label>
@@ -284,7 +289,7 @@
         <div class="form-grid">
           <div class="field">
             <label for="pollQuestion">Otázka ankety</label>
-            <input type="text" id="pollQuestion" placeholder="Např. Uděláme o víkendu společný grind?" />
+            <input type="text" id="pollQuestion" placeholder="Např. Uděláme o víkendu vánoční grind?" />
           </div>
           <div class="field">
             <label for="pollDesc">Doplňující popis</label>
