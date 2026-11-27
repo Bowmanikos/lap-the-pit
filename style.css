@@ -456,7 +456,6 @@ body {
   text-transform: uppercase;
 }
 
-/* Common = šedá, Rare = modrá, Epic = fialová */
 .rarity-common {
   background: rgba(156, 163, 175, 0.18);
   color: #d1d5db;
@@ -672,7 +671,7 @@ body {
   background: var(--gold);
 }
 
-/* ROSTER GRID (SEZNAM HRÁČŮ) */
+/* ROSTER GRID */
 .roster-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
