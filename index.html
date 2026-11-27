@@ -81,7 +81,7 @@
       <!-- TOP 3 PODIUM -->
       <section class="podium-section">
         <div class="section-head">
-          <h2>🏆 Top 3 nejaktivnější členové</h2>
+          <h2>🏆 Top 3 podle % podílu</h2>
           <span class="muted-text">Kliknutím na kartu otevřeš detail hráče a komentáře</span>
         </div>
         <div id="podiumGrid" class="podium-grid"></div>
@@ -368,15 +368,6 @@
             <input type="text" id="newObjUnit" placeholder="Výchozí: bodů" />
           </div>
         </div>
-
-        <div class="tier-goals-section mt-12">
-          <div class="card-header-row mb-8">
-            <span class="player-sub mt-0">Volitelné cíle pro tiery T0–T10 (lze vyplnit i přímo u konkrétního tieru v seznamu níže):</span>
-            <button type="button" class="btn btn-dark btn-sm" onclick="clearTierInputs()">Vyčistit T0–T10</button>
-          </div>
-          <div id="tierGoalsGrid" class="tier-goals-grid"></div>
-        </div>
-
         <div class="admin-actions">
           <button type="button" class="btn btn-green" onclick="addObjective()">+ Přidat objective</button>
         </div>
@@ -384,7 +375,7 @@
 
       <!-- SEZNAM AKTIVNÍCH OBJECTIVES V ADMINISTRACI -->
       <div class="admin-card mt-16">
-        <h3>🎯 Aktivní objectives — Tier, Kolik je, Celkově kolik je třeba &amp; ryska %</h3>
+        <h3>🎯 Úprava Objectives</h3>
         <div id="adminObjectivesList" class="admin-players-list"></div>
       </div>
 
