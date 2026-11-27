@@ -65,6 +65,16 @@ const RARITY_WEIGHTS = {
 
 const ROMAN_TIERS = ["", "I", "II", "III"];
 const EMPTY_TIERS_T0_TO_T10 = Array(11).fill(null);
+const FALLBACK_AVATAR = "https://mc-heads.net/avatar/MHF_Steve/48";
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
 
 function formatNowCzech() {
   return new Date().toLocaleString("cs-CZ", {
@@ -76,6 +86,37 @@ function formatNowCzech() {
   });
 }
 
+function createInitialPlayers() {
+  const baseList = [
+    { id: 1, nick: "Ouwkk", rank: "Elder", prestige: 24, weeklyGoal: 1000 },
+    { id: 2, nick: "Domeziss", rank: "Leader", prestige: 24, weeklyGoal: 1000 },
+    { id: 3, nick: "Bowmanik", rank: "Co-leader", prestige: 27, weeklyGoal: 1000 },
+    { id: 4, nick: "DigYourGrave", rank: "Co-leader", prestige: 27, weeklyGoal: 1000 },
+    { id: 5, nick: "Haft_", rank: "Co-leader", prestige: 31, weeklyGoal: 1000 },
+    { id: 6, nick: "etroxq", rank: "Elder", prestige: 16, weeklyGoal: 1000 },
+    { id: 7, nick: "Stuiviiq", rank: "Elder", prestige: 21, weeklyGoal: 1000 },
+    { id: 8, nick: "PorscheAirlines", rank: "Elder", prestige: 33, weeklyGoal: 1000 },
+    { id: 9, nick: "Wuixiiq", rank: "Elder", prestige: 25, weeklyGoal: 1000 },
+    { id: 10, nick: "451MadisonBearr", rank: "Elder", prestige: 18, weeklyGoal: 1000 },
+    { id: 11, nick: "ItsZUMO", rank: "Member", prestige: 24, weeklyGoal: 1000 },
+    { id: 12, nick: "Fedasko", rank: "Member", prestige: 21, weeklyGoal: 1000 },
+    { id: 13, nick: "Pqndiss", rank: "Member", prestige: 21, weeklyGoal: 1000 },
+    { id: 14, nick: "stormzthechamp", rank: "Member", prestige: 18, weeklyGoal: 1000 },
+    { id: 15, nick: "Kerry_rp", rank: "Member", prestige: 22, weeklyGoal: 1000 },
+    { id: 16, nick: "CLSAirlines", rank: "Member", prestige: 16, weeklyGoal: 1000 },
+    { id: 17, nick: "SomFrajerMore", rank: "Member", prestige: 15, weeklyGoal: 1000 },
+    { id: 18, nick: "Tronndd", rank: "Member", prestige: 20, weeklyGoal: 1000 }
+  ];
+
+  return baseList.map(p => ({
+    ...p,
+    deaths: 0,
+    sigils: 0,
+    contrib: {},
+    comments: []
+  }));
+}
+
 const defaultData = {
   weekName: "Týden #1 • LAP The Pit",
   lastUpdated: formatNowCzech(),
@@ -83,26 +124,7 @@ const defaultData = {
   enchantCatalog: structuredClone(DEFAULT_ENCHANT_CATALOG),
   objectives: [],
   announcements: [],
-  players: [
-    { id: 1, nick: "Ouwkk", rank: "Elder", prestige: 24, weeklyGoal: 1000, contrib: {} },
-    { id: 2, nick: "Domeziss", rank: "Leader", prestige: 24, weeklyGoal: 1000, contrib: {} },
-    { id: 3, nick: "Bowmanik", rank: "Co-leader", prestige: 27, weeklyGoal: 1000, contrib: {} },
-    { id: 4, nick: "DigYourGrave", rank: "Co-leader", prestige: 27, weeklyGoal: 1000, contrib: {} },
-    { id: 5, nick: "Haft_", rank: "Co-leader", prestige: 31, weeklyGoal: 1000, contrib: {} },
-    { id: 6, nick: "etroxq", rank: "Elder", prestige: 16, weeklyGoal: 1000, contrib: {} },
-    { id: 7, nick: "Stuiviiq", rank: "Elder", prestige: 21, weeklyGoal: 1000, contrib: {} },
-    { id: 8, nick: "PorscheAirlines", rank: "Elder", prestige: 33, weeklyGoal: 1000, contrib: {} },
-    { id: 9, nick: "Wuixiiq", rank: "Elder", prestige: 25, weeklyGoal: 1000, contrib: {} },
-    { id: 10, nick: "451MadisonBearr", rank: "Elder", prestige: 18, weeklyGoal: 1000, contrib: {} },
-    { id: 11, nick: "ItsZUMO", rank: "Member", prestige: 24, weeklyGoal: 1000, contrib: {} },
-    { id: 12, nick: "Fedasko", rank: "Member", prestige: 21, weeklyGoal: 1000, contrib: {} },
-    { id: 13, nick: "Pqndiss", rank: "Member", prestige: 21, weeklyGoal: 1000, contrib: {} },
-    { id: 14, nick: "stormzthechamp", rank: "Member", prestige: 18, weeklyGoal: 1000, contrib: {} },
-    { id: 15, nick: "Kerry_rp", rank: "Member", prestige: 22, weeklyGoal: 1000, contrib: {} },
-    { id: 16, nick: "CLSAirlines", rank: "Member", prestige: 16, weeklyGoal: 1000, contrib: {} },
-    { id: 17, nick: "SomFrajerMore", rank: "Member", prestige: 15, weeklyGoal: 1000, contrib: {} },
-    { id: 18, nick: "Tronndd", rank: "Member", prestige: 20, weeklyGoal: 1000, contrib: {} }
-  ],
+  players: createInitialPlayers(),
   history: []
 };
 
@@ -119,9 +141,11 @@ const pantsState = {
 
 let data = loadData();
 let isSyncingFromRemote = false;
+let activePlayerModalId = null;
+let toastTimer = null;
 
 function getMcHeadUrl(nick, size = 48) {
-  return `https://mc-heads.net/avatar/${encodeURIComponent(nick)}/${size}`;
+  return `https://mc-heads.net/avatar/${encodeURIComponent(nick || "MHF_Steve")}/${size}`;
 }
 
 function parseOptionalTierGoal(val) {
@@ -142,10 +166,38 @@ function normalizeObjective(obj) {
 
   return {
     ...obj,
+    title: String(obj.title || "Objective"),
+    unit: String(obj.unit || "bodů"),
     tiers,
     activeTier,
     currentDone,
     rewardCompleted: Boolean(obj.rewardCompleted)
+  };
+}
+
+function normalizeComment(c, idx = 0) {
+  return {
+    id: c.id || `cmt_${idx}_${Date.now()}`,
+    author: String(c.author || "Člen LAP"),
+    text: String(c.text || ""),
+    createdAt: String(c.createdAt || "—")
+  };
+}
+
+function normalizePlayer(p, idx = 0) {
+  return {
+    ...p,
+    id: p.id ?? idx + 1,
+    nick: String(p.nick || `Hráč ${idx + 1}`),
+    rank: p.rank || "Member",
+    prestige: Math.max(0, Math.min(100, Number(p.prestige) || 0)),
+    weeklyGoal: Math.max(0, Number(p.weeklyGoal) || 0),
+    deaths: Math.max(0, Number(p.deaths) || 0),
+    sigils: Math.max(0, Number(p.sigils) || 0),
+    contrib: p.contrib && typeof p.contrib === "object" ? p.contrib : {},
+    comments: Array.isArray(p.comments)
+      ? p.comments.filter(c => c && String(c.text || "").trim()).map(normalizeComment)
+      : []
   };
 }
 
@@ -166,6 +218,7 @@ function hydrateData(parsed) {
   return {
     ...base,
     ...parsed,
+    weekName: String(parsed.weekName || base.weekName),
     lastUpdated: parsed.lastUpdated || formatNowCzech(),
     totalChestOverride: overrideVal,
     enchantCatalog: catalog,
@@ -175,28 +228,40 @@ function hydrateData(parsed) {
     announcements: Array.isArray(parsed.announcements)
       ? parsed.announcements.map(a => ({
           ...a,
-          author: a.author || "Člen LAP",
+          author: String(a.author || "Člen LAP"),
           pinned: Boolean(a.pinned)
         }))
       : [],
     players: Array.isArray(parsed.players)
-      ? parsed.players.map(p => ({
-          ...p,
-          rank: p.rank || "Member",
-          prestige: Math.max(0, Number(p.prestige) || 0),
-          weeklyGoal: Math.max(0, Number(p.weeklyGoal) || 0),
-          contrib: p.contrib || {}
-        }))
+      ? parsed.players.map(normalizePlayer)
       : base.players,
     history: Array.isArray(parsed.history) ? parsed.history : []
   };
+}
+
+function decodeBase64Utf8(base64Str) {
+  const binary = atob(base64Str);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new TextDecoder().decode(bytes);
+}
+
+function encodeBase64Utf8(str) {
+  const bytes = new TextEncoder().encode(str);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
 }
 
 function loadData() {
   try {
     if (window.location.hash.startsWith("#pit=")) {
       const raw = window.location.hash.replace("#pit=", "");
-      const parsed = JSON.parse(decodeURIComponent(atob(raw)));
+      const parsed = JSON.parse(decodeBase64Utf8(raw));
       const hydrated = hydrateData(parsed);
       localStorage.setItem("lap_pit_data_v14", JSON.stringify(hydrated));
       return hydrated;
@@ -223,6 +288,13 @@ async function pushRemoteData(payload) {
     body: JSON.stringify(payload)
   });
   if (!res.ok) throw new Error("Chyba při zápisu do databáze");
+}
+
+function isUserEditingForm() {
+  const active = document.activeElement;
+  if (!active) return false;
+  const tag = active.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
 }
 
 function saveData(touchTimestamp = true, syncRemote = true) {
@@ -254,7 +326,7 @@ async function initRealtimeSync() {
   }
 
   setInterval(async () => {
-    if (document.hidden) return;
+    if (document.hidden || isUserEditingForm()) return;
     try {
       const latest = await fetchRemoteData();
       if (!latest) return;
@@ -265,6 +337,9 @@ async function initRealtimeSync() {
         data = latest;
         localStorage.setItem("lap_pit_data_v14", JSON.stringify(data));
         renderAll();
+        if (activePlayerModalId !== null) {
+          openPlayerDetailModal(activePlayerModalId, true);
+        }
         isSyncingFromRemote = false;
       }
     } catch {
@@ -298,6 +373,11 @@ function getCurrentActorNick() {
   return authState.currentUser?.mcNick || authState.currentUser?.username || "";
 }
 
+function setHidden(el, shouldHide) {
+  if (!el) return;
+  el.classList.toggle("hidden", Boolean(shouldHide));
+}
+
 function applyAnnouncementAuthGuard() {
   const gate = document.getElementById("announcementLoginGate");
   const card = document.getElementById("announcementCreatorCard");
@@ -306,14 +386,14 @@ function applyAnnouncementAuthGuard() {
   if (!gate || !card) return;
 
   if (isLoggedIn()) {
-    gate.style.display = "none";
-    card.style.display = "";
+    setHidden(gate, true);
+    setHidden(card, false);
     if (hint) {
-      hint.innerHTML = `Vytváříš jako: <strong>${getCurrentActorNick()}</strong>`;
+      hint.innerHTML = `Vytváříš jako: <strong>${escapeHtml(getCurrentActorNick())}</strong>`;
     }
   } else {
-    gate.style.display = "";
-    card.style.display = "none";
+    setHidden(gate, false);
+    setHidden(card, true);
   }
 }
 
@@ -322,25 +402,23 @@ function applyPantsAuthGuard() {
   const content = document.getElementById("pantsAuthenticatedContent");
   const adminEnchantCard = document.getElementById("adminEnchantCreatorCard");
 
-  if (adminEnchantCard) {
-    adminEnchantCard.style.display = isAdmin() ? "" : "none";
-  }
+  setHidden(adminEnchantCard, !isAdmin());
 
   if (!gate || !content) return;
 
   if (isLoggedIn()) {
-    gate.style.display = "none";
-    content.style.display = "";
+    setHidden(gate, true);
+    setHidden(content, false);
   } else {
-    gate.style.display = "";
-    content.style.display = "none";
+    setHidden(gate, false);
+    setHidden(content, true);
   }
 }
 
 function applyPermissions() {
   const adminOnlyEls = document.querySelectorAll("[data-admin-only]");
   adminOnlyEls.forEach(el => {
-    el.style.display = isAdmin() ? "" : "none";
+    setHidden(el, !isAdmin());
   });
 
   const userPill = document.getElementById("authUserPill");
@@ -356,13 +434,13 @@ function applyPermissions() {
     roleTag.textContent = role === "admin" ? "ADMIN" : "USER";
     roleTag.className = role === "admin" ? "role-tag admin" : "role-tag";
 
-    userPill.style.display = "flex";
-    openBtn.style.display = "none";
-    logoutBtn.style.display = "";
+    setHidden(userPill, false);
+    setHidden(openBtn, true);
+    setHidden(logoutBtn, false);
   } else {
-    userPill.style.display = "none";
-    openBtn.style.display = "";
-    logoutBtn.style.display = "none";
+    setHidden(userPill, true);
+    setHidden(openBtn, false);
+    setHidden(logoutBtn, true);
   }
 
   const adminTab = document.getElementById("tab-admin");
@@ -428,6 +506,9 @@ function submitAuthForm(e) {
   renderPodium();
   renderRoster();
   renderAnnouncements();
+  if (activePlayerModalId !== null) {
+    openPlayerDetailModal(activePlayerModalId, true);
+  }
 
   setTimeout(() => {
     closeAuthModal();
@@ -442,6 +523,9 @@ function logoutUser() {
   renderPodium();
   renderRoster();
   renderAnnouncements();
+  if (activePlayerModalId !== null) {
+    openPlayerDetailModal(activePlayerModalId, true);
+  }
   showToast("Byl jsi odhlášen.");
 }
 
@@ -454,21 +538,33 @@ function switchTab(tab) {
   if (tab === "pants" && !isLoggedIn()) {
     applyPantsAuthGuard();
     document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
-    document.querySelectorAll(".nav-tab").forEach(el => el.classList.remove("active"));
+    document.querySelectorAll(".nav-tab").forEach(el => {
+      el.classList.remove("active");
+      el.setAttribute("aria-selected", "false");
+    });
     document.getElementById("tab-pants").classList.add("active");
     const btn = document.querySelector('.nav-tab[data-tab="pants"]');
-    if (btn) btn.classList.add("active");
+    if (btn) {
+      btn.classList.add("active");
+      btn.setAttribute("aria-selected", "true");
+    }
     openAuthModal();
     showToast("Pro vstup do sekce Pants se musíš přihlásit.");
     return;
   }
 
   document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
-  document.querySelectorAll(".nav-tab").forEach(el => el.classList.remove("active"));
+  document.querySelectorAll(".nav-tab").forEach(el => {
+    el.classList.remove("active");
+    el.setAttribute("aria-selected", "false");
+  });
 
   document.getElementById(`tab-${tab}`).classList.add("active");
   const btn = document.querySelector(`.nav-tab[data-tab="${tab}"]`);
-  if (btn) btn.classList.add("active");
+  if (btn) {
+    btn.classList.add("active");
+    btn.setAttribute("aria-selected", "true");
+  }
 }
 
 /* PANTS LOGIKA */
@@ -508,14 +604,14 @@ function openPantsCrate() {
     const msg = `Gratuluju získal si ${droppedColor.name}`;
     if (statusEl) {
       statusEl.className = "pants-status-box hit";
-      statusEl.innerHTML = `🎉 <strong>${msg}!</strong> Teď je můžeš enchantovat přes Tier 1 → Tier 2 → Tier 3.`;
+      statusEl.innerHTML = `🎉 <strong>${escapeHtml(msg)}!</strong> Teď je můžeš enchantovat přes Tier 1 → Tier 2 → Tier 3.`;
     }
     showToast(`🎉 ${msg}!`);
   } else {
     const missMsg = "Nevadi, zkus to priste";
     if (statusEl) {
       statusEl.className = "pants-status-box miss";
-      statusEl.innerHTML = `❌ <strong>${missMsg}</strong>`;
+      statusEl.innerHTML = `❌ <strong>${escapeHtml(missMsg)}</strong>`;
     }
     showToast(missMsg);
   }
@@ -696,7 +792,7 @@ function renderPantsTab() {
       workbench.innerHTML = `
         <div class="pants-item-card">
           <div class="player-name">Čeká na drop pantů z bedny</div>
-          <p class="muted-text" style="margin-top:6px;">
+          <p class="muted-text mt-6">
             Jakmile ti z bedny padnou náhodné panty (<strong>Red</strong>, <strong>Green</strong>, <strong>Blue</strong> nebo <strong>Yellow</strong>), můžeš je zde postupně enchantovat přes <strong>Tier 1 → Tier 2 → Tier 3</strong>. U každého enchantu může padnout libovolný tier (<strong>I</strong>, <strong>II</strong> nebo <strong>III</strong>).
           </p>
         </div>
@@ -706,28 +802,28 @@ function renderPantsTab() {
       const tierLabel = p.tier === 0 ? "Čisté panty (Tier 0)" : `Tier ${p.tier} Panty`;
       const enchantsHtml = p.enchants.length
         ? p.enchants.map(e => `
-            <div class="enchant-line border-${e.rarity}">
+            <div class="enchant-line border-${escapeHtml(e.rarity)}">
               <div class="enchant-line-top">
-                <strong class="enchant-name-${e.rarity}">${e.name} ${ROMAN_TIERS[e.level]}</strong>
-                <span class="rarity-pill rarity-${e.rarity}">${e.rarity}</span>
+                <strong class="enchant-name-${escapeHtml(e.rarity)}">${escapeHtml(e.name)} ${ROMAN_TIERS[e.level] || ""}</strong>
+                <span class="rarity-pill rarity-${escapeHtml(e.rarity)}">${escapeHtml(e.rarity)}</span>
               </div>
             </div>
           `).join("")
-        : `<p class="muted-text" style="margin-top:10px;">Zatím žádné enchanty. Klikni pro enchantnutí na <strong>Tier 1</strong>.</p>`;
+        : `<p class="muted-text mt-10">Zatím žádné enchanty. Klikni pro enchantnutí na <strong>Tier 1</strong>.</p>`;
 
       const actionBtnHtml = p.tier < 3
         ? `<button type="button" class="btn btn-green" onclick="enchantCurrentPantsStep()">✨ Enchantnout na Tier ${p.tier + 1}</button>`
-        : `<div class="completion-box" style="margin-top:12px; margin-bottom:0;"><span>Stav itemu</span><strong>✅ HOTOVO • TIER 3 PANTY</strong></div>`;
+        : `<div class="completion-box mt-12 mb-0"><span>Stav itemu</span><strong>✅ HOTOVO • TIER 3 PANTY</strong></div>`;
 
       workbench.innerHTML = `
         <div class="pants-item-card ${col.cardClass}">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+          <div class="card-header-row">
             <div>
-              <span class="pants-swatch ${col.swatchClass}" style="vertical-align:middle; margin-right:6px;"></span>
-              <strong style="font-size:1.05rem;">${col.name}</strong>
-              <span class="player-sub">• ${tierLabel}</span>
+              <span class="pants-swatch ${col.swatchClass}"></span>
+              <strong class="player-name">${escapeHtml(col.name)}</strong>
+              <span class="player-sub">• ${escapeHtml(tierLabel)}</span>
             </div>
-            <span class="obj-badge">${p.fromChest || "Bedna"}</span>
+            <span class="obj-badge">${escapeHtml(p.fromChest || "Bedna")}</span>
           </div>
           ${enchantsHtml}
           <div class="admin-actions">
@@ -749,15 +845,15 @@ function renderPantsTab() {
 
     catalogGrid.innerHTML = byRarity.map(group => `
       <div class="pants-item-card">
-        <h3 style="margin-bottom:8px;">${group.title}</h3>
+        <h3>${escapeHtml(group.title)}</h3>
         ${group.items.length === 0 ? `<p class="muted-text">Žádné enchanty v této kategorii.</p>` : ""}
         ${group.items.map(it => `
-          <div class="enchant-line border-${it.rarity}">
+          <div class="enchant-line border-${escapeHtml(it.rarity)}">
             <div class="enchant-line-top">
-              <strong class="enchant-name-${it.rarity}">${it.name}</strong>
-              <div style="display:flex; align-items:center; gap:6px;">
-                <span class="muted-text" style="font-size:0.76rem;">Tier I–III</span>
-                ${isAdmin() ? `<button type="button" class="btn btn-red" style="padding:2px 7px; font-size:0.72rem;" onclick="removeCustomEnchant('${it.id}')">✕</button>` : ""}
+              <strong class="enchant-name-${escapeHtml(it.rarity)}">${escapeHtml(it.name)}</strong>
+              <div class="admin-inputs">
+                <span class="muted-text">Tier I–III</span>
+                ${isAdmin() ? `<button type="button" class="btn btn-red btn-sm" onclick="removeCustomEnchant('${escapeHtml(it.id)}')">✕</button>` : ""}
               </div>
             </div>
           </div>
@@ -775,19 +871,19 @@ function renderPantsTab() {
         const col = getColorObj(item.colorId);
         return `
           <div class="pants-item-card ${col.cardClass}">
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;">
+            <div class="card-header-row mb-6">
               <div>
-                <span class="pants-swatch ${col.swatchClass}" style="vertical-align:middle; margin-right:6px;"></span>
-                <strong>${col.name} • Tier 3</strong>
+                <span class="pants-swatch ${col.swatchClass}"></span>
+                <strong>${escapeHtml(col.name)} • Tier 3</strong>
               </div>
-              <span class="obj-badge reward">${item.owner || "Hráč"}</span>
+              <span class="obj-badge reward">${escapeHtml(item.owner || "Hráč")}</span>
             </div>
-            <div class="player-sub" style="margin-top:0; margin-bottom:8px;">${item.createdAt || ""}</div>
-            ${item.enchants.map(e => `
-              <div class="enchant-line border-${e.rarity}">
+            <div class="player-sub mt-0 mb-8">${escapeHtml(item.createdAt || "")}</div>
+            ${(item.enchants || []).map(e => `
+              <div class="enchant-line border-${escapeHtml(e.rarity)}">
                 <div class="enchant-line-top">
-                  <strong class="enchant-name-${e.rarity}">${e.name} ${ROMAN_TIERS[e.level]}</strong>
-                  <span class="rarity-pill rarity-${e.rarity}">${e.rarity}</span>
+                  <strong class="enchant-name-${escapeHtml(e.rarity)}">${escapeHtml(e.name)} ${ROMAN_TIERS[e.level] || ""}</strong>
+                  <span class="rarity-pill rarity-${escapeHtml(e.rarity)}">${escapeHtml(e.rarity)}</span>
                 </div>
               </div>
             `).join("")}
@@ -940,7 +1036,7 @@ function renderSortSelect() {
     <option value="nick">Abecedně (A–Z)</option>
   `;
   data.objectives.forEach((obj, idx) => {
-    select.innerHTML += `<option value="obj:${obj.id}">Podle: ${obj.title} (#${idx + 1})</option>`;
+    select.innerHTML += `<option value="obj:${escapeHtml(obj.id)}">Podle: ${escapeHtml(obj.title)} (#${idx + 1})</option>`;
   });
   if ([...select.options].some(o => o.value === currentVal)) {
     select.value = currentVal;
@@ -951,9 +1047,9 @@ function renderTotalChestBanners() {
   const chest = getTotalChestInfo();
   const bannerHtml = `
     <div>
-      <div class="player-sub" style="margin-top:0;">SPOLEČNÁ ODMĚNA GUILDY</div>
-      <div class="player-name" style="font-size:1.08rem; margin-top:2px;">Celková aktuální bedna</div>
-      <div class="player-sub">${chest.formulaText}${chest.isManual ? " • ručně nastaveno" : " • automatický součet tierů"}</div>
+      <div class="player-sub mt-0">SPOLEČNÁ ODMĚNA GUILDY</div>
+      <div class="player-name mt-2">Celková aktuální bedna</div>
+      <div class="player-sub">${escapeHtml(chest.formulaText)}${chest.isManual ? " • ručně nastaveno" : " • automatický součet tierů"}</div>
     </div>
     <div class="total-chest-tier">🎁 Celková bedna: T${chest.totalTier}</div>
   `;
@@ -1008,19 +1104,19 @@ function renderObjectives() {
       : `T${info.activeTier}: ${info.doneValue.toLocaleString("cs-CZ")} ${obj.unit} (cíl nenastaven)`;
 
     const missingText = info.missingInCurrentTier !== null
-      ? `Chybí do T${info.activeTier}: <strong>${info.missingInCurrentTier.toLocaleString("cs-CZ")} ${obj.unit}</strong>`
+      ? `Chybí do T${info.activeTier}: <strong>${info.missingInCurrentTier.toLocaleString("cs-CZ")} ${escapeHtml(obj.unit)}</strong>`
       : "Cíl aktuálního tieru bez hodnoty";
 
     return `
       <div class="obj-summary-card ${info.rewardCompleted ? "reward-done" : ""}">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+        <div class="card-header-row">
           <div>
             <div class="obj-badges-row">
-              <span class="obj-badge ${info.rewardCompleted ? "reward" : ""}">OBJ ${idx + 1} • ${info.tierBadgeText}</span>
+              <span class="obj-badge ${info.rewardCompleted ? "reward" : ""}">OBJ ${idx + 1} • ${escapeHtml(info.tierBadgeText)}</span>
             </div>
-            <div class="player-name">${obj.title}</div>
+            <div class="player-name">${escapeHtml(obj.title)}</div>
           </div>
-          <div class="obj-goal-pill">${ratioText}</div>
+          <div class="obj-goal-pill">${escapeHtml(ratioText)}</div>
         </div>
         <div class="progress-track">
           <div class="progress-bar ${info.rewardCompleted ? "reward" : ""}" style="width:${info.pct}%"></div>
@@ -1051,28 +1147,28 @@ function renderObjectives() {
       }
 
       return `
-        <div style="display:flex; justify-content:space-between; padding:5px 0; border-top:1px solid var(--border); font-size:0.84rem; gap:8px;">
+        <div class="tier-row">
           <span>${statusIcon} <strong>Tier T${tNum}</strong> ${isCurrent ? "(aktuální)" : ""}</span>
-          <span>${rightLabel}</span>
+          <span>${escapeHtml(rightLabel)}</span>
         </div>
       `;
     }).join("");
 
     const nextTierHint = info.nextTierObj
-      ? `<div class="player-sub" style="margin-bottom:10px;">Do dalšího nastaveného tieru (T${info.nextTierObj.tier}) chybí: <strong>${info.missingToNextTier.toLocaleString("cs-CZ")} ${obj.unit}</strong></div>`
-      : `<div class="player-sub" style="margin-bottom:10px;">Další nastavený tier není zadán</div>`;
+      ? `<div class="player-sub mb-10">Do dalšího nastaveného tieru (T${info.nextTierObj.tier}) chybí: <strong>${info.missingToNextTier.toLocaleString("cs-CZ")} ${escapeHtml(obj.unit)}</strong></div>`
+      : `<div class="player-sub mb-10">Další nastavený tier není zadán</div>`;
 
     const summaryLine = info.tierGoal
-      ? `Aktuálně v T${info.activeTier}: <strong>${info.doneValue.toLocaleString("cs-CZ")} / ${info.tierGoal.toLocaleString("cs-CZ")} ${obj.unit}</strong> (${info.pct} %) • Chybí: <strong>${info.missingInCurrentTier.toLocaleString("cs-CZ")} ${obj.unit}</strong>`
-      : `Aktuálně v T${info.activeTier}: <strong>${info.doneValue.toLocaleString("cs-CZ")} ${obj.unit}</strong> (cíl bez hodnoty)`;
+      ? `Aktuálně v T${info.activeTier}: <strong>${info.doneValue.toLocaleString("cs-CZ")} / ${info.tierGoal.toLocaleString("cs-CZ")} ${escapeHtml(obj.unit)}</strong> (${info.pct} %) • Chybí: <strong>${info.missingInCurrentTier.toLocaleString("cs-CZ")} ${escapeHtml(obj.unit)}</strong>`
+      : `Aktuálně v T${info.activeTier}: <strong>${info.doneValue.toLocaleString("cs-CZ")} ${escapeHtml(obj.unit)}</strong> (cíl bez hodnoty)`;
 
     return `
       <div class="admin-card ${info.rewardCompleted ? "reward-done" : ""}">
         <div class="obj-badges-row">
-          <span class="obj-badge ${info.rewardCompleted ? "reward" : ""}">OBJECTIVE ${idx + 1} • ${info.tierBadgeText}</span>
+          <span class="obj-badge ${info.rewardCompleted ? "reward" : ""}">OBJECTIVE ${idx + 1} • ${escapeHtml(info.tierBadgeText)}</span>
         </div>
-        <h3>${obj.title}</h3>
-        <p class="muted-text" style="margin-bottom:6px;">${summaryLine}</p>
+        <h3>${escapeHtml(obj.title)}</h3>
+        <p class="muted-text mb-6">${summaryLine}</p>
         ${nextTierHint}
         ${tierListHtml}
       </div>
@@ -1080,13 +1176,26 @@ function renderObjectives() {
   }).join("");
 }
 
+function buildPlayerStatsMiniHtml(player) {
+  const commentCount = Array.isArray(player.comments) ? player.comments.length : 0;
+  return `
+    <div class="player-stats-mini">
+      <span class="stat-chip">💀 Smrti: <strong>${(player.deaths || 0).toLocaleString("cs-CZ")}</strong></span>
+      <span class="stat-chip">🔮 Sigils: <strong>${(player.sigils || 0).toLocaleString("cs-CZ")}</strong></span>
+      <span class="stat-chip">💬 ${commentCount}</span>
+    </div>
+  `;
+}
+
 function buildPlayerContribHtml(player) {
   const goalLine = player.weeklyGoal > 0
-    ? `<div class="obj-progress-top" style="margin-bottom:8px;"><span>🎯 Týdenní cíl: ${getPlayerTotalUnits(player).toLocaleString("cs-CZ")} / ${player.weeklyGoal.toLocaleString("cs-CZ")}</span><strong>${Math.min(100, Math.round((getPlayerTotalUnits(player) / player.weeklyGoal) * 100))} %</strong></div>`
+    ? `<div class="obj-progress-top mb-8"><span>🎯 Týdenní cíl: ${getPlayerTotalUnits(player).toLocaleString("cs-CZ")} / ${player.weeklyGoal.toLocaleString("cs-CZ")}</span><strong>${Math.min(100, Math.round((getPlayerTotalUnits(player) / player.weeklyGoal) * 100))} %</strong></div>`
     : "";
 
+  const statsMini = buildPlayerStatsMiniHtml(player);
+
   if (data.objectives.length === 0) {
-    return `${goalLine}<div class="player-sub">Zatím žádné aktivní objectives</div>`;
+    return `${goalLine}<div class="player-sub">Zatím žádné aktivní objectives</div>${statsMini}`;
   }
 
   return goalLine + data.objectives.map(obj => {
@@ -1102,20 +1211,73 @@ function buildPlayerContribHtml(player) {
     return `
       <div class="obj-progress-item">
         <div class="obj-progress-top">
-          <span>${obj.title}</span>
-          <strong>${made.toLocaleString("cs-CZ")} ${obj.unit} (${sharePct}%)</strong>
+          <span>${escapeHtml(obj.title)}</span>
+          <strong>${made.toLocaleString("cs-CZ")} ${escapeHtml(obj.unit)} (${sharePct}%)</strong>
         </div>
         <div class="progress-track">
           <div class="progress-bar ${info.rewardCompleted ? "reward" : ""}" style="width:${barPct}%"></div>
         </div>
       </div>
     `;
-  }).join("");
+  }).join("") + statsMini;
 }
 
-function openPlayerDetailModal(playerId) {
+function canDeletePlayerComment(comment) {
+  if (!isLoggedIn()) return false;
+  if (isAdmin()) return true;
+  const current = getCurrentActorNick().toLowerCase();
+  return current && String(comment.author || "").toLowerCase() === current;
+}
+
+function addPlayerComment(e, playerId) {
+  e.preventDefault();
+  if (!isLoggedIn()) {
+    openAuthModal();
+    showToast("Pro napsání komentáře se musíš přihlásit.");
+    return;
+  }
+
+  const input = document.getElementById("playerCommentInput");
+  const text = (input?.value || "").trim();
+  if (!text) {
+    showToast("Napiš text komentáře.");
+    return;
+  }
+
   const player = data.players.find(p => p.id === playerId);
   if (!player) return;
+
+  player.comments = player.comments || [];
+  player.comments.unshift({
+    id: `cmt_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    author: getCurrentActorNick() || "Hráč",
+    text,
+    createdAt: formatNowCzech()
+  });
+
+  saveData();
+  openPlayerDetailModal(playerId, true);
+  showToast("Komentář přidán.");
+}
+
+function deletePlayerComment(playerId, commentId) {
+  const player = data.players.find(p => p.id === playerId);
+  if (!player || !Array.isArray(player.comments)) return;
+  const target = player.comments.find(c => c.id === commentId);
+  if (!target || !canDeletePlayerComment(target)) return;
+
+  player.comments = player.comments.filter(c => c.id !== commentId);
+  saveData();
+  openPlayerDetailModal(playerId, true);
+  showToast("Komentář smazán.");
+}
+
+function openPlayerDetailModal(playerId, preserveInputValue = false) {
+  const player = data.players.find(p => p.id === playerId);
+  if (!player) return;
+
+  const prevDraft = preserveInputValue ? (document.getElementById("playerCommentInput")?.value || "") : "";
+  activePlayerModalId = playerId;
 
   const totalUnits = getPlayerTotalUnits(player);
   const sharePct = getPlayerOverallSharePct(player);
@@ -1135,35 +1297,85 @@ function openPlayerDetailModal(playerId) {
         return `
           <div class="obj-progress-item">
             <div class="obj-progress-top">
-              <span>${obj.title}</span>
-              <strong>${made.toLocaleString("cs-CZ")} ${obj.unit}</strong>
+              <span>${escapeHtml(obj.title)}</span>
+              <strong>${made.toLocaleString("cs-CZ")} ${escapeHtml(obj.unit)}</strong>
             </div>
           </div>
         `;
       }).join("")
     : `<p class="muted-text">Zatím nejsou nastaveny žádné společné objectives.</p>`;
 
+  const comments = Array.isArray(player.comments) ? player.comments : [];
+  const commentsHtml = comments.length
+    ? comments.map(c => `
+        <div class="player-comment-item">
+          <div class="player-comment-head">
+            <span class="player-comment-author">
+              <img src="${getMcHeadUrl(c.author, 20)}" alt="${escapeHtml(c.author)}" loading="lazy" onerror="this.src='${FALLBACK_AVATAR}'" />
+              ${escapeHtml(c.author)}
+            </span>
+            <div class="admin-inputs">
+              <span>${escapeHtml(c.createdAt)}</span>
+              ${canDeletePlayerComment(c)
+                ? `<button type="button" class="btn btn-red btn-sm" onclick="deletePlayerComment(${player.id}, '${escapeHtml(c.id)}')">✕</button>`
+                : ""}
+            </div>
+          </div>
+          <div class="player-comment-text">${escapeHtml(c.text)}</div>
+        </div>
+      `).join("")
+    : `<p class="muted-text mt-8">Zatím žádné komentáře.</p>`;
+
+  const commentFormHtml = isLoggedIn()
+    ? `
+      <form class="player-comment-form" onsubmit="addPlayerComment(event, ${player.id})">
+        <label for="playerCommentInput" class="sr-only">Napsat veřejný komentář</label>
+        <input type="text" id="playerCommentInput" maxlength="240" placeholder="Napiš veřejný komentář k hráči..." />
+        <button type="submit" class="btn btn-green">💬 Odeslat</button>
+      </form>
+    `
+    : `
+      <div class="admin-actions mt-10">
+        <button type="button" class="btn btn-green btn-sm" onclick="openAuthModal()">🔐 Přihlásit se pro psaní komentářů</button>
+      </div>
+    `;
+
   document.getElementById("playerModalBody").innerHTML = `
     <div class="completion-box">
       <span>Celkový podíl na plnění</span>
       <strong>${data.objectives.length ? `${sharePct} %` : "—"}</strong>
     </div>
-    <div class="admin-player-item" style="margin-bottom:12px;">
+    <div class="admin-player-item mb-10">
       <span>Celkem nahráno tento týden</span>
       <strong>${totalUnits.toLocaleString("cs-CZ")}</strong>
     </div>
-    <div class="admin-player-item" style="margin-bottom:14px;">
+    <div class="admin-player-item mb-10">
       <span>Týdenní cíl hráče</span>
       <strong>${player.weeklyGoal > 0 ? `${totalUnits.toLocaleString("cs-CZ")} / ${player.weeklyGoal.toLocaleString("cs-CZ")} (${goalPct} %)` : "Nenastaven"}</strong>
     </div>
-    <h3 style="margin-bottom:8px; font-size:0.95rem;">Příspěvky podle objectives</h3>
+    <div class="admin-player-item mb-14">
+      <span>💀 Smrti: <strong>${(player.deaths || 0).toLocaleString("cs-CZ")}</strong></span>
+      <span>🔮 Sigils: <strong>${(player.sigils || 0).toLocaleString("cs-CZ")}</strong></span>
+    </div>
+    <h3 class="mb-8 modal-subheading">Příspěvky podle objectives</h3>
     ${objBreakdown}
+
+    <div class="player-comments-section">
+      <h3 class="modal-subheading">💬 Veřejné komentáře (${comments.length})</h3>
+      ${commentsHtml}
+      ${commentFormHtml}
+    </div>
   `;
+
+  if (preserveInputValue && document.getElementById("playerCommentInput")) {
+    document.getElementById("playerCommentInput").value = prevDraft;
+  }
 
   document.getElementById("playerModal").classList.add("open");
 }
 
 function closePlayerModal() {
+  activePlayerModalId = null;
   document.getElementById("playerModal").classList.remove("open");
 }
 
@@ -1191,15 +1403,16 @@ function renderPodium() {
 
   podiumGrid.innerHTML = sorted.slice(0, 3).map((p, i) => {
     const isMe = activeNick && p.nick.toLowerCase() === activeNick;
+    const safeRank = ["Leader", "Co-leader", "Elder", "Member"].includes(p.rank) ? p.rank : "Member";
     return `
       <div class="podium-card rank-${i + 1}" onclick="openPlayerDetailModal(${p.id})">
         <div class="podium-head">
           <div class="rank-badge">${medals[i]}</div>
-          <img class="skin-head" src="${getMcHeadUrl(p.nick, 48)}" alt="${p.nick}" onerror="this.src='https://mc-heads.net/avatar/MHF_Steve/48'" />
+          <img class="skin-head" src="${getMcHeadUrl(p.nick, 48)}" alt="${escapeHtml(p.nick)}" loading="lazy" onerror="this.src='${FALLBACK_AVATAR}'" />
           <div>
-            <div class="player-name">${p.nick} ${isMe ? "• Ty" : ""}</div>
+            <div class="player-name">${escapeHtml(p.nick)} ${isMe ? "• Ty" : ""}</div>
             <div class="player-sub">
-              <span class="rank-pill rank-${p.rank}">${p.rank}</span>
+              <span class="rank-pill rank-${safeRank}">${escapeHtml(safeRank)}</span>
               Prestige ${p.prestige}
             </div>
           </div>
@@ -1249,15 +1462,16 @@ function renderRoster() {
 
   rosterGrid.innerHTML = list.map(p => {
     const isMe = activeNick && p.nick.toLowerCase() === activeNick;
+    const safeRank = ["Leader", "Co-leader", "Elder", "Member"].includes(p.rank) ? p.rank : "Member";
     return `
       <div class="roster-card" onclick="openPlayerDetailModal(${p.id})">
         <div class="roster-card-top">
           <div class="roster-user-info">
-            <img class="skin-head" src="${getMcHeadUrl(p.nick, 48)}" alt="${p.nick}" onerror="this.src='https://mc-heads.net/avatar/MHF_Steve/48'" />
+            <img class="skin-head" src="${getMcHeadUrl(p.nick, 48)}" alt="${escapeHtml(p.nick)}" loading="lazy" onerror="this.src='${FALLBACK_AVATAR}'" />
             <div>
-              <div class="player-name">${p.nick} ${isMe ? "• Ty" : ""}</div>
+              <div class="player-name">${escapeHtml(p.nick)} ${isMe ? "• Ty" : ""}</div>
               <div class="player-sub">
-                <span class="rank-pill rank-${p.rank}">${p.rank}</span>
+                <span class="rank-pill rank-${safeRank}">${escapeHtml(safeRank)}</span>
                 Prestige ${p.prestige}
               </div>
             </div>
@@ -1371,42 +1585,43 @@ function buildAnnouncementCardHtml(ann, inputPrefix = "roleInput") {
   const authorName = ann.author || "Člen LAP";
 
   const signupsHtml = (ann.signups && ann.signups.length > 0)
-    ? ann.signups.map(s => `<span class="signup-chip"><strong>${s.nick}</strong>: ${s.roleNote}</span>`).join("")
+    ? ann.signups.map(s => `<span class="signup-chip"><strong>${escapeHtml(s.nick)}</strong>: ${escapeHtml(s.roleNote)}</span>`).join("")
     : `<span class="player-sub">Zatím se nikdo nezapsal.</span>`;
 
   const pinBtn = canManageAnnouncementPin(ann)
-    ? `<button type="button" class="btn ${ann.pinned ? "btn-gold" : "btn-dark"}" onclick="togglePinAnnouncement('${ann.id}')">${ann.pinned ? "📌 Připnuto" : "📌 Připnout na přehled"}</button>`
+    ? `<button type="button" class="btn ${ann.pinned ? "btn-gold" : "btn-dark"}" onclick="togglePinAnnouncement('${escapeHtml(ann.id)}')">${ann.pinned ? "📌 Připnuto" : "📌 Připnout na přehled"}</button>`
     : "";
 
   const delBtn = isAdmin()
-    ? `<button type="button" class="btn btn-red" onclick="removeAnnouncement('${ann.id}')">Smazat</button>`
+    ? `<button type="button" class="btn btn-red" onclick="removeAnnouncement('${escapeHtml(ann.id)}')">Smazat</button>`
     : "";
 
   return `
     <div class="announcement-card ${ann.pinned ? "pinned" : ""}">
       <div class="announcement-top">
         <div>
-          <h3>${ann.pinned ? "📌 " : ""}${ann.title}</h3>
+          <h3>${ann.pinned ? "📌 " : ""}${escapeHtml(ann.title)}</h3>
           <div class="announcement-author-badge">
-            <img src="${getMcHeadUrl(authorName, 20)}" alt="${authorName}" style="width:18px; height:18px; border-radius:4px;" onerror="this.src='https://mc-heads.net/avatar/MHF_Steve/20'" />
-            <span>Vytvořil: <strong>${authorName}</strong></span>
+            <img src="${getMcHeadUrl(authorName, 20)}" alt="${escapeHtml(authorName)}" loading="lazy" onerror="this.src='${FALLBACK_AVATAR}'" />
+            <span>Vytvořil: <strong>${escapeHtml(authorName)}</strong></span>
           </div>
-          <div class="player-sub">Vytvořeno: ${ann.createdAt || "—"}</div>
+          <div class="player-sub">Vytvořeno: ${escapeHtml(ann.createdAt || "—")}</div>
         </div>
-        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <span class="announcement-schedule">${scheduleText}</span>
+        <div class="admin-inputs mt-0">
+          <span class="announcement-schedule">${escapeHtml(scheduleText)}</span>
           ${pinBtn}
           ${delBtn}
         </div>
       </div>
-      ${ann.desc ? `<p style="margin-bottom:12px; font-size:0.92rem;">${ann.desc}</p>` : ""}
-      <div style="margin-bottom:12px;">
-        <div class="player-sub" style="margin-bottom:4px;">Kdo co bude dělat:</div>
+      ${ann.desc ? `<p class="ann-desc">${escapeHtml(ann.desc)}</p>` : ""}
+      <div class="mb-12">
+        <div class="player-sub mb-4">Kdo co bude dělat:</div>
         <div>${signupsHtml}</div>
       </div>
       <div class="add-player-row">
-        <input type="text" id="${inputPrefix}_${ann.id}" placeholder="Co budu dělat (např. streakovat mid, sbírat kills...)" />
-        <button type="button" class="btn btn-green" onclick="joinAnnouncement('${ann.id}', '${inputPrefix}')">✋ Zapsat plán</button>
+        <label for="${inputPrefix}_${escapeHtml(ann.id)}" class="sr-only">Co budu dělat</label>
+        <input type="text" id="${inputPrefix}_${escapeHtml(ann.id)}" placeholder="Co budu dělat (např. streakovat mid, sbírat kills...)" />
+        <button type="button" class="btn btn-green" onclick="joinAnnouncement('${escapeHtml(ann.id)}', '${escapeHtml(inputPrefix)}')">✋ Zapsat plán</button>
       </div>
     </div>
   `;
@@ -1422,10 +1637,10 @@ function renderAnnouncements() {
   const pinnedItems = data.announcements.filter(a => a.pinned);
   if (pinnedSection && pinnedList) {
     if (pinnedItems.length > 0) {
-      pinnedSection.style.display = "";
+      setHidden(pinnedSection, false);
       pinnedList.innerHTML = pinnedItems.map(a => buildAnnouncementCardHtml(a, "pinRoleInput")).join("");
     } else {
-      pinnedSection.style.display = "none";
+      setHidden(pinnedSection, true);
       pinnedList.innerHTML = "";
     }
   }
@@ -1455,8 +1670,8 @@ function renderAdmin() {
     }
     totalChestBox.innerHTML = `
       <div>
-        <strong style="color:#fbbf24; font-size:1rem;">🎁 Celková aktuální bedna: T${chest.totalTier}</strong>
-        <div class="player-sub">Výpočet: ${chest.formulaText}</div>
+        <strong class="chest-admin-title">🎁 Celková aktuální bedna: T${chest.totalTier}</strong>
+        <div class="player-sub">Výpočet: ${escapeHtml(chest.formulaText)}</div>
       </div>
       <div class="admin-inputs">
         <label>
@@ -1486,42 +1701,42 @@ function renderAdmin() {
         return `
           <label>
             T${tIdx}:
-            <input type="number" min="1" value="${goal ?? ""}" placeholder="—" onchange="updateObjectiveTier('${obj.id}', ${tIdx}, this.value)" />
+            <input type="number" min="1" value="${goal ?? ""}" placeholder="—" onchange="updateObjectiveTier('${escapeHtml(obj.id)}', ${tIdx}, this.value)" />
           </label>
         `;
       }).join("");
 
       return `
-        <div class="admin-player-item ${info.rewardCompleted ? "reward-done" : ""}" style="flex-direction:column; align-items:stretch; gap:10px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div class="admin-player-item admin-obj-card ${info.rewardCompleted ? "reward-done" : ""}">
+          <div class="card-header-row">
             <div>
-              <strong>#${idx + 1} ${obj.title}</strong>
-              <span class="player-sub">• ${info.tierBadgeText}${info.tierGoal || info.rewardCompleted ? ` (${info.pct} %)` : ""}</span>
+              <strong>#${idx + 1} ${escapeHtml(obj.title)}</strong>
+              <span class="player-sub">• ${escapeHtml(info.tierBadgeText)}${info.tierGoal || info.rewardCompleted ? ` (${info.pct} %)` : ""}</span>
             </div>
             <div class="admin-inputs">
               <label>
                 Tier:
-                <select onchange="setObjectiveActiveTier('${obj.id}', this.value)">
+                <select onchange="setObjectiveActiveTier('${escapeHtml(obj.id)}', this.value)">
                   ${tierOptionsHtml}
                 </select>
               </label>
               <label>
                 Hotovo:
-                <input type="number" min="0" value="${info.doneValue}" onchange="setObjectiveDoneValue('${obj.id}', this.value)" />
+                <input type="number" min="0" value="${info.doneValue}" onchange="setObjectiveDoneValue('${escapeHtml(obj.id)}', this.value)" />
               </label>
               <label>
                 Z kolika:
-                <input type="number" min="1" value="${info.tierGoal ?? ""}" placeholder="—" onchange="updateObjectiveTier('${obj.id}', ${info.activeTier}, this.value)" />
+                <input type="number" min="1" value="${info.tierGoal ?? ""}" placeholder="—" onchange="updateObjectiveTier('${escapeHtml(obj.id)}', ${info.activeTier}, this.value)" />
               </label>
-              <button type="button" class="btn ${info.rewardCompleted ? "btn-gold" : "btn-dark"}" onclick="toggleObjectiveRewardCompleted('${obj.id}')">
+              <button type="button" class="btn ${info.rewardCompleted ? "btn-gold" : "btn-dark"}" onclick="toggleObjectiveRewardCompleted('${escapeHtml(obj.id)}')">
                 ${info.rewardCompleted ? "🎁 Bedna splněna (zrušit)" : "🎁 Reward bedna splněna"}
               </button>
-              ${isCustomDone ? `<button class="btn btn-dark" onclick="resetObjectiveDoneAuto('${obj.id}')">Auto součet hráčů</button>` : ""}
-              <button class="btn btn-red" onclick="removeObjective('${obj.id}')">Smazat</button>
+              ${isCustomDone ? `<button type="button" class="btn btn-dark" onclick="resetObjectiveDoneAuto('${escapeHtml(obj.id)}')">Auto součet hráčů</button>` : ""}
+              <button type="button" class="btn btn-red" onclick="removeObjective('${escapeHtml(obj.id)}')">Smazat</button>
             </div>
           </div>
-          <div class="admin-inputs" style="border-top:1px solid var(--border); padding-top:8px;">
-            <span class="player-sub" style="margin-right:4px;">Cíle všech tierů T0–T10 (prázdné = bez hodnoty):</span>
+          <div class="admin-inputs admin-tier-row">
+            <span class="player-sub">Cíle všech tierů T0–T10 (prázdné = bez hodnoty):</span>
             ${tierEditors}
           </div>
         </div>
@@ -1533,14 +1748,15 @@ function renderAdmin() {
   const ranks = ["Member", "Elder", "Co-leader", "Leader"];
 
   playersWrap.innerHTML = data.players.map(p => {
-    const rankOpts = ranks.map(r => `<option value="${r}" ${p.rank === r ? "selected" : ""}>${r}</option>`).join("");
+    const safeRank = ranks.includes(p.rank) ? p.rank : "Member";
+    const rankOpts = ranks.map(r => `<option value="${r}" ${safeRank === r ? "selected" : ""}>${r}</option>`).join("");
     const inputsHtml = data.objectives.length
       ? data.objectives.map(obj => {
           const val = getPlayerContrib(p, obj.id);
           return `
             <label>
-              ${obj.title} (${obj.unit}):
-              <input type="number" min="0" value="${val}" onchange="updatePlayerContrib(${p.id}, '${obj.id}', this.value)" />
+              ${escapeHtml(obj.title)} (${escapeHtml(obj.unit)}):
+              <input type="number" min="0" value="${val}" onchange="updatePlayerContrib(${p.id}, '${escapeHtml(obj.id)}', this.value)" />
             </label>
           `;
         }).join("")
@@ -1548,11 +1764,11 @@ function renderAdmin() {
 
     return `
       <div class="admin-player-item">
-        <div style="display:flex; align-items:center; gap:10px;">
-          <img class="skin-head" style="width:32px; height:32px;" src="${getMcHeadUrl(p.nick, 32)}" alt="${p.nick}" onerror="this.src='https://mc-heads.net/avatar/MHF_Steve/32'" />
+        <div class="admin-player-head">
+          <img class="skin-head skin-head-sm" src="${getMcHeadUrl(p.nick, 32)}" alt="${escapeHtml(p.nick)}" loading="lazy" onerror="this.src='${FALLBACK_AVATAR}'" />
           <div>
-            <strong>${p.nick}</strong>
-            <span class="rank-pill rank-${p.rank}" style="margin-left:6px;">${p.rank}</span>
+            <strong>${escapeHtml(p.nick)}</strong>
+            <span class="rank-pill rank-${safeRank}">${escapeHtml(safeRank)}</span>
             <span class="player-sub">Prestige ${p.prestige}</span>
           </div>
         </div>
@@ -1569,8 +1785,16 @@ function renderAdmin() {
             Týdenní cíl:
             <input type="number" min="0" value="${p.weeklyGoal || 0}" onchange="updatePlayerMeta(${p.id}, 'weeklyGoal', this.value)" />
           </label>
+          <label>
+            Smrti:
+            <input type="number" min="0" value="${p.deaths || 0}" onchange="updatePlayerMeta(${p.id}, 'deaths', this.value)" />
+          </label>
+          <label>
+            Sigils:
+            <input type="number" min="0" value="${p.sigils || 0}" onchange="updatePlayerMeta(${p.id}, 'sigils', this.value)" />
+          </label>
           ${inputsHtml}
-          <button class="btn btn-red" onclick="removePlayer(${p.id})">✕</button>
+          <button type="button" class="btn btn-red" onclick="removePlayer(${p.id})">✕</button>
         </div>
       </div>
     `;
@@ -1739,9 +1963,14 @@ function addPlayer() {
   if (!isAdmin()) return;
   const nick = document.getElementById("newNick").value.trim();
   const rank = document.getElementById("newRank").value;
-  const prestige = Math.max(0, parseInt(document.getElementById("newPrestige").value, 10) || 1);
+  const prestige = Math.max(0, Math.min(100, parseInt(document.getElementById("newPrestige").value, 10) || 1));
   const weeklyGoal = Math.max(0, parseInt(document.getElementById("newWeeklyGoal").value, 10) || 0);
-  if (!nick) return;
+  const deaths = Math.max(0, parseInt(document.getElementById("newDeaths").value, 10) || 0);
+  const sigils = Math.max(0, parseInt(document.getElementById("newSigils").value, 10) || 0);
+  if (!nick) {
+    showToast("Vyplň Minecraft nick.");
+    return;
+  }
 
   data.players.push({
     id: Date.now(),
@@ -1749,12 +1978,17 @@ function addPlayer() {
     rank,
     prestige,
     weeklyGoal,
-    contrib: {}
+    deaths,
+    sigils,
+    contrib: {},
+    comments: []
   });
 
   document.getElementById("newNick").value = "";
   document.getElementById("newPrestige").value = "";
   document.getElementById("newWeeklyGoal").value = "";
+  document.getElementById("newDeaths").value = "";
+  document.getElementById("newSigils").value = "";
   saveData();
   showToast(`Hráč ${nick} přidán!`);
 }
@@ -1770,9 +2004,16 @@ function updatePlayerMeta(playerId, field, val) {
     player.prestige = Math.max(0, Math.min(100, parseInt(val, 10) || 0));
   } else if (field === "weeklyGoal") {
     player.weeklyGoal = Math.max(0, parseInt(val, 10) || 0);
+  } else if (field === "deaths") {
+    player.deaths = Math.max(0, parseInt(val, 10) || 0);
+  } else if (field === "sigils") {
+    player.sigils = Math.max(0, parseInt(val, 10) || 0);
   }
 
   saveData();
+  if (activePlayerModalId === playerId) {
+    openPlayerDetailModal(playerId, true);
+  }
   showToast(`Upraveno u hráče ${player.nick}.`);
 }
 
@@ -1790,13 +2031,16 @@ function updatePlayerContrib(playerId, objId, val) {
 function removePlayer(id) {
   if (!isAdmin()) return;
   data.players = data.players.filter(p => p.id !== id);
+  if (activePlayerModalId === id) {
+    closePlayerModal();
+  }
   saveData();
   showToast("Hráč odebrán.");
 }
 
 function closeWeek() {
   if (!isAdmin()) return;
-  if (!confirm("Uzavřít tento týden do historie a vynulovat týdenní příspěvky hráčů?")) return;
+  if (!confirm("Uzavřít tento týden do historie a vynulovat týdenní příspěvky, smrti i sigils hráčů?")) return;
 
   const chest = getTotalChestInfo();
   const objectivesSnapshot = data.objectives.map(obj => {
@@ -1820,6 +2064,8 @@ function closeWeek() {
         rank: p.rank,
         prestige: p.prestige,
         weeklyGoal: p.weeklyGoal || 0,
+        deaths: p.deaths || 0,
+        sigils: p.sigils || 0,
         totalUnits: getPlayerTotalUnits(p),
         sharePct: getPlayerOverallSharePct(p),
         contrib: structuredClone(p.contrib || {})
@@ -1832,6 +2078,8 @@ function closeWeek() {
 
   data.players.forEach(p => {
     p.contrib = {};
+    p.deaths = 0;
+    p.sigils = 0;
   });
   data.objectives.forEach(obj => {
     obj.activeTier = 0;
@@ -1856,7 +2104,7 @@ function deleteHistoryWeek(historyId) {
 function renderHistory() {
   const wrap = document.getElementById("historyList");
   if (data.history.length === 0) {
-    wrap.innerHTML = `<p class="muted-text" style="text-align:center;">Zatím žádné uzavřené týdny.</p>`;
+    wrap.innerHTML = `<p class="muted-text text-center">Zatím žádné uzavřené týdny.</p>`;
     return;
   }
 
@@ -1868,17 +2116,17 @@ function renderHistory() {
 
     return `
       <div class="admin-card">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
-          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <strong style="color:var(--accent);">${h.weekName}</strong>
-            <span class="obj-badge reward">${chestLabel}</span>
+        <div class="card-header-row mb-8">
+          <div class="admin-inputs mt-0">
+            <strong class="history-week-title">${escapeHtml(h.weekName)}</strong>
+            <span class="obj-badge reward">${escapeHtml(chestLabel)}</span>
           </div>
-          <div style="display:flex; align-items:center; gap:10px;">
-            <span class="player-sub">${h.date}</span>
-            ${isAdmin() ? `<button type="button" class="btn btn-red" onclick="deleteHistoryWeek('${h.id}')">🗑️ Smazat týden</button>` : ""}
+          <div class="admin-inputs mt-0">
+            <span class="player-sub">${escapeHtml(h.date)}</span>
+            ${isAdmin() ? `<button type="button" class="btn btn-red" onclick="deleteHistoryWeek('${escapeHtml(h.id)}')">🗑️ Smazat týden</button>` : ""}
           </div>
         </div>
-        <div class="player-sub" style="margin-bottom:12px;">${objsSummary}</div>
+        <div class="player-sub mb-12">${escapeHtml(objsSummary)}</div>
         ${h.players.map((p, idx) => {
           const breakdown = h.objectives && h.objectives.length > 0
             ? h.objectives.map(o => `${o.title}: ${p.contrib?.[o.id] || 0} ${o.unit}`).join(" | ")
@@ -1886,10 +2134,11 @@ function renderHistory() {
           const shareLabel = h.objectives && h.objectives.length > 0
             ? `${p.sharePct} % podíl`
             : `${(p.totalUnits ?? 0).toLocaleString("cs-CZ")} bodů`;
+          const statsExtra = `💀 ${p.deaths ?? 0} • 🔮 ${p.sigils ?? 0}`;
           return `
-            <div style="display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-top:1px solid var(--border); font-size:0.88rem; flex-wrap:wrap;">
-              <span>#${idx + 1} <strong>${p.nick}</strong> (${p.rank} • P${p.prestige})</span>
-              <span>${breakdown} → <strong style="color:var(--accent);">${shareLabel}</strong></span>
+            <div class="history-player-row">
+              <span>#${idx + 1} <strong>${escapeHtml(p.nick)}</strong> (${escapeHtml(p.rank)} • P${p.prestige}) • ${escapeHtml(statsExtra)}</span>
+              <span>${escapeHtml(breakdown)} → <strong class="history-share">${escapeHtml(shareLabel)}</strong></span>
             </div>
           `;
         }).join("")}
@@ -1940,24 +2189,30 @@ function copyAllCredentials() {
   const lines = ACCOUNTS.map(
     a => `${a.mcNick} (login: ${a.username}, role: ${a.role}) -> Heslo: ${a.password}`
   ).join("\n");
-  navigator.clipboard.writeText(lines).then(() => {
-    showToast("Přehled účtů a hesel zkopírován!");
-  });
+  navigator.clipboard?.writeText(lines)
+    .then(() => showToast("Přehled účtů a hesel zkopírován!"))
+    .catch(() => showToast("Kopírování se nezdařilo."));
 }
 
 function copyShareLink() {
-  const encoded = btoa(encodeURIComponent(JSON.stringify(data)));
-  const url = `${window.location.origin}${window.location.pathname}#pit=${encoded}`;
-  navigator.clipboard.writeText(url).then(() => {
-    showToast("Sdílecí odkaz zkopírován!");
-  });
+  try {
+    const encoded = encodeBase64Utf8(JSON.stringify(data));
+    const url = `${window.location.origin}${window.location.pathname}#pit=${encoded}`;
+    navigator.clipboard?.writeText(url)
+      .then(() => showToast("Sdílecí odkaz zkopírován!"))
+      .catch(() => showToast("Kopírování se nezdařilo."));
+  } catch {
+    showToast("Nepodařilo se vytvořit sdílecí odkaz.");
+  }
 }
 
 function showToast(msg) {
   const toast = document.getElementById("toast");
+  if (!toast) return;
   toast.textContent = msg;
   toast.classList.add("show");
-  setTimeout(() => toast.classList.remove("show"), 2500);
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 2500);
 }
 
 function renderAll() {
