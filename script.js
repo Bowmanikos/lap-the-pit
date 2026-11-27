@@ -1,8 +1,6 @@
-// Firebase Realtime Database
 const FIREBASE_DB_URL = "https://lap-web-22840-default-rtdb.firebaseio.com";
 const FIREBASE_PATH = "/lap_pit_guild.json";
 
-// Účty: pouze bowman (Bowmanik) má roli 'admin', všichni ostatní mají roli 'user'
 const ACCOUNTS = [
   { username: "bowman", mcNick: "Bowmanik", password: "bowman999", role: "admin" },
   { username: "brumik", mcNick: "Ouwkk", password: "brumik101", role: "user" },
@@ -52,15 +50,17 @@ const DEFAULT_ENCHANT_CATALOG = [
   { id: "enc_really_alive", name: "Really Alive", rarity: "epic" }
 ];
 
-const RARITY_WEIGHTS = {
-  common: 60,
-  rare: 30,
-  epic: 10
-};
-
+const RARITY_WEIGHTS = { common: 60, rare: 30, epic: 10 };
 const ROMAN_TIERS = ["", "I", "II", "III"];
 const EMPTY_TIERS_T0_TO_T10 = Array(11).fill(null);
 const FALLBACK_AVATAR = "https://mc-heads.net/avatar/MHF_Steve/48";
+
+function cloneData(val) {
+  if (typeof structuredClone === "function") {
+    return structuredClone(val);
+  }
+  return JSON.parse(JSON.stringify(val));
+}
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -116,7 +116,7 @@ const defaultData = {
   weekName: "Týden #1 • LAP The Pit",
   lastUpdated: formatNowCzech(),
   totalChestOverride: null,
-  enchantCatalog: structuredClone(DEFAULT_ENCHANT_CATALOG),
+  enchantCatalog: cloneData(DEFAULT_ENCHANT_CATALOG),
   objectives: [],
   announcements: [],
   polls: [],
@@ -124,15 +124,32 @@ const defaultData = {
   history: []
 };
 
+function safeReadSession() {
+  try {
+    return JSON.parse(sessionStorage.getItem("lap_pit_session")) || null;
+  } catch {
+    return null;
+  }
+}
+
+function safeReadSavedPants() {
+  try {
+    const arr = JSON.parse(localStorage.getItem("lap_pit_saved_pants_v1"));
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
 const authState = {
-  currentUser: JSON.parse(sessionStorage.getItem("lap_pit_session")) || null
+  currentUser: safeReadSession()
 };
 
 const pantsState = {
   cratesOpened: 0,
   pantsDroppedCount: 0,
   currentPants: null,
-  savedPants: JSON.parse(localStorage.getItem("lap_pit_saved_pants_v1")) || []
+  savedPants: safeReadSavedPants()
 };
 
 let data = loadData();
@@ -150,119 +167,171 @@ function parseOptionalTierGoal(val) {
   return Number.isFinite(num) && num > 0 ? Math.floor(num) : null;
 }
 
-function normalizeObjective(obj) {
-  const activeTier = Math.min(10, Math.max(0, Number(obj.activeTier) ?? 0));
-  const tiers = Array.isArray(obj.tiers) && obj.tiers.length === 11
-    ? obj.tiers.map(parseOptionalTierGoal)
-    : [...EMPTY_TIERS_T0_TO_T10];
+function normalizeObjective(obj, idx = 0) {
+  const safeObj = obj && typeof obj === "object" ? obj : {};
+  const activeTier = Math.min(10, Math.max(0, Number(safeObj.activeTier) ?? 0));
 
-  const explicitGoal = parseOptionalTierGoal(obj.tierGoal ?? obj.targetTotal ?? obj.goal);
+  let tiers = [...EMPTY_TIERS_T0_TO_T10];
+  if (Array.isArray(safeObj.tiers)) {
+    for (let i = 0; i < 11; i++) {
+      tiers[i] = parseOptionalTierGoal(safeObj.tiers[i]);
+    }
+  } else if (safeObj.tiers && typeof safeObj.tiers === "object") {
+    for (let i = 0; i <= 10; i++) {
+      tiers[i] = parseOptionalTierGoal(safeObj.tiers[i] ?? safeObj.tiers[`T${i}`]);
+    }
+  }
+
+  const explicitGoal = parseOptionalTierGoal(
+    safeObj.tierGoal ?? safeObj.targetTotal ?? safeObj.goal ?? safeObj.target
+  );
   if (explicitGoal !== null && tiers[activeTier] === null) {
     tiers[activeTier] = explicitGoal;
   }
 
-  const rawDoneCandidate = obj.currentDone ?? obj.done ?? obj.progress;
-  const currentDone = typeof rawDoneCandidate === "number" && !Number.isNaN(rawDoneCandidate)
-    ? Math.max(0, rawDoneCandidate)
-    : (rawDoneCandidate !== null && rawDoneCandidate !== undefined && String(rawDoneCandidate).trim() !== "" && !Number.isNaN(Number(rawDoneCandidate))
+  const rawDoneCandidate = safeObj.currentDone ?? safeObj.done ?? safeObj.progress;
+  const currentDone =
+    typeof rawDoneCandidate === "number" && !Number.isNaN(rawDoneCandidate)
+      ? Math.max(0, rawDoneCandidate)
+      : rawDoneCandidate !== null &&
+          rawDoneCandidate !== undefined &&
+          String(rawDoneCandidate).trim() !== "" &&
+          !Number.isNaN(Number(rawDoneCandidate))
         ? Math.max(0, Number(rawDoneCandidate))
-        : null);
+        : null;
 
   return {
-    ...obj,
-    title: String(obj.title || "Objective"),
-    unit: String(obj.unit || "bodů"),
+    ...safeObj,
+    id: String(safeObj.id || `obj_${idx}`),
+    title: String(safeObj.title || `Objective ${idx + 1}`),
+    unit: String(safeObj.unit || "bodů"),
     tiers,
     activeTier,
     currentDone,
-    rewardCompleted: Boolean(obj.rewardCompleted)
+    rewardCompleted: Boolean(safeObj.rewardCompleted)
   };
 }
 
 function normalizeComment(c, idx = 0) {
+  const item = c && typeof c === "object" ? c : {};
   return {
-    id: c.id || `cmt_${idx}_${Date.now()}`,
-    author: String(c.author || "Člen LAP"),
-    text: String(c.text || ""),
-    createdAt: String(c.createdAt || "—")
+    id: String(item.id || `cmt_${idx}`),
+    author: String(item.author || "Člen LAP"),
+    text: String(item.text || ""),
+    createdAt: String(item.createdAt || "—")
   };
 }
 
 function normalizePlayer(p, idx = 0) {
+  const safeP = p && typeof p === "object" ? p : {};
   return {
-    ...p,
-    id: p.id ?? idx + 1,
-    nick: String(p.nick || `Hráč ${idx + 1}`),
-    rank: p.rank || "Member",
-    prestige: Math.max(0, Math.min(100, Number(p.prestige) || 0)),
-    weeklyGoal: Math.max(0, Number(p.weeklyGoal) || 0),
-    deaths: Math.max(0, Number(p.deaths) || 0),
-    sigils: Math.max(0, Number(p.sigils) || 0),
-    contrib: p.contrib && typeof p.contrib === "object" ? p.contrib : {},
-    comments: Array.isArray(p.comments)
-      ? p.comments.filter(c => c && String(c.text || "").trim()).map(normalizeComment)
+    ...safeP,
+    id: safeP.id ?? idx + 1,
+    nick: String(safeP.nick || `Hráč ${idx + 1}`),
+    rank: safeP.rank || "Member",
+    prestige: Math.max(0, Math.min(100, Number(safeP.prestige) || 0)),
+    weeklyGoal: Math.max(0, Number(safeP.weeklyGoal) || 0),
+    deaths: Math.max(0, Number(safeP.deaths) || 0),
+    sigils: Math.max(0, Number(safeP.sigils) || 0),
+    contrib: safeP.contrib && typeof safeP.contrib === "object" ? safeP.contrib : {},
+    comments: Array.isArray(safeP.comments)
+      ? safeP.comments.filter(c => c && String(c.text || "").trim()).map(normalizeComment)
       : []
   };
 }
 
 function normalizePoll(poll, idx = 0) {
-  const votes = poll.votes && typeof poll.votes === "object"
-    ? Object.fromEntries(
-        Object.entries(poll.votes)
-          .filter(([nick, v]) => nick && (v === "yes" || v === "no"))
-          .map(([nick, v]) => [String(nick), v])
-      )
-    : {};
+  const safePoll = poll && typeof poll === "object" ? poll : {};
+  const votes =
+    safePoll.votes && typeof safePoll.votes === "object"
+      ? Object.fromEntries(
+          Object.entries(safePoll.votes)
+            .filter(([nick, v]) => nick && (v === "yes" || v === "no"))
+            .map(([nick, v]) => [String(nick), v])
+        )
+      : {};
 
   return {
-    id: poll.id || `poll_${idx}_${Date.now()}`,
-    question: String(poll.question || "Anketa"),
-    desc: String(poll.desc || ""),
-    author: String(poll.author || "Člen LAP"),
-    pinned: Boolean(poll.pinned),
-    createdAt: String(poll.createdAt || "—"),
+    id: String(safePoll.id || `poll_${idx}`),
+    question: String(safePoll.question || "Anketa"),
+    desc: String(safePoll.desc || ""),
+    author: String(safePoll.author || "Člen LAP"),
+    pinned: Boolean(safePoll.pinned),
+    createdAt: String(safePoll.createdAt || "—"),
     votes
   };
 }
 
 function hydrateData(parsed) {
-  const base = structuredClone(defaultData);
-  const overrideVal = parsed.totalChestOverride === null || parsed.totalChestOverride === undefined
-    ? null
-    : Math.min(10, Math.max(0, Number(parsed.totalChestOverride) || 0));
+  const base = cloneData(defaultData);
+  const src = parsed && typeof parsed === "object" ? parsed : {};
 
-  const catalog = Array.isArray(parsed.enchantCatalog) && parsed.enchantCatalog.length > 0
-    ? parsed.enchantCatalog.map((e, i) => ({
-        id: e.id || `enc_${i}_${Date.now()}`,
-        name: String(e.name || "Enchant"),
-        rarity: ["common", "rare", "epic"].includes(e.rarity) ? e.rarity : "common"
-      }))
-    : structuredClone(DEFAULT_ENCHANT_CATALOG);
+  const overrideVal =
+    src.totalChestOverride === null || src.totalChestOverride === undefined || src.totalChestOverride === ""
+      ? null
+      : Math.min(10, Math.max(0, Number(src.totalChestOverride) || 0));
+
+  const rawCatalog = Array.isArray(src.enchantCatalog)
+    ? src.enchantCatalog
+    : src.enchantCatalog && typeof src.enchantCatalog === "object"
+      ? Object.values(src.enchantCatalog)
+      : [];
+
+  const catalog =
+    rawCatalog.length > 0
+      ? rawCatalog.map((e, i) => ({
+          id: String(e?.id || `enc_${i}`),
+          name: String(e?.name || "Enchant"),
+          rarity: ["common", "rare", "epic"].includes(e?.rarity) ? e.rarity : "common"
+        }))
+      : cloneData(DEFAULT_ENCHANT_CATALOG);
+
+  const rawObjectives = Array.isArray(src.objectives)
+    ? src.objectives
+    : src.objectives && typeof src.objectives === "object"
+      ? Object.values(src.objectives)
+      : [];
+
+  const rawAnnouncements = Array.isArray(src.announcements)
+    ? src.announcements
+    : src.announcements && typeof src.announcements === "object"
+      ? Object.values(src.announcements)
+      : [];
+
+  const rawPolls = Array.isArray(src.polls)
+    ? src.polls
+    : src.polls && typeof src.polls === "object"
+      ? Object.values(src.polls)
+      : [];
+
+  const rawPlayers = Array.isArray(src.players)
+    ? src.players
+    : src.players && typeof src.players === "object"
+      ? Object.values(src.players)
+      : base.players;
+
+  const rawHistory = Array.isArray(src.history)
+    ? src.history
+    : src.history && typeof src.history === "object"
+      ? Object.values(src.history)
+      : [];
 
   return {
     ...base,
-    ...parsed,
-    weekName: String(parsed.weekName || base.weekName),
-    lastUpdated: parsed.lastUpdated || formatNowCzech(),
+    ...src,
+    weekName: String(src.weekName || base.weekName),
+    lastUpdated: src.lastUpdated || formatNowCzech(),
     totalChestOverride: overrideVal,
     enchantCatalog: catalog,
-    objectives: Array.isArray(parsed.objectives)
-      ? parsed.objectives.map(normalizeObjective)
-      : [],
-    announcements: Array.isArray(parsed.announcements)
-      ? parsed.announcements.map(a => ({
-          ...a,
-          author: String(a.author || "Člen LAP"),
-          pinned: Boolean(a.pinned)
-        }))
-      : [],
-    polls: Array.isArray(parsed.polls)
-      ? parsed.polls.map(normalizePoll)
-      : [],
-    players: Array.isArray(parsed.players)
-      ? parsed.players.map(normalizePlayer)
-      : base.players,
-    history: Array.isArray(parsed.history) ? parsed.history : []
+    objectives: rawObjectives.map(normalizeObjective),
+    announcements: rawAnnouncements.map(a => ({
+      ...(a && typeof a === "object" ? a : {}),
+      author: String(a?.author || "Člen LAP"),
+      pinned: Boolean(a?.pinned)
+    })),
+    polls: rawPolls.map(normalizePoll),
+    players: rawPlayers.map(normalizePlayer),
+    history: rawHistory
   };
 }
 
@@ -294,10 +363,10 @@ function loadData() {
       return hydrated;
     }
     const saved = localStorage.getItem("lap_pit_data_v15") || localStorage.getItem("lap_pit_data_v14");
-    if (!saved) return structuredClone(defaultData);
+    if (!saved) return cloneData(defaultData);
     return hydrateData(JSON.parse(saved));
   } catch {
-    return structuredClone(defaultData);
+    return cloneData(defaultData);
   }
 }
 
@@ -409,15 +478,12 @@ function applyAnnouncementAuthGuard() {
   const gate = document.getElementById("announcementLoginGate");
   const card = document.getElementById("announcementCreatorCard");
   const hint = document.getElementById("annCreatorAuthorHint");
-
   if (!gate || !card) return;
 
   if (isLoggedIn()) {
     setHidden(gate, true);
     setHidden(card, false);
-    if (hint) {
-      hint.innerHTML = `Vytváříš jako: <strong>${escapeHtml(getCurrentActorNick())}</strong>`;
-    }
+    if (hint) hint.innerHTML = `Vytváříš jako: <strong>${escapeHtml(getCurrentActorNick())}</strong>`;
   } else {
     setHidden(gate, false);
     setHidden(card, true);
@@ -428,15 +494,12 @@ function applyPollAuthGuard() {
   const gate = document.getElementById("pollLoginGate");
   const card = document.getElementById("pollCreatorCard");
   const hint = document.getElementById("pollCreatorAuthorHint");
-
   if (!gate || !card) return;
 
   if (isLoggedIn()) {
     setHidden(gate, true);
     setHidden(card, false);
-    if (hint) {
-      hint.innerHTML = `Vytváříš jako: <strong>${escapeHtml(getCurrentActorNick())}</strong>`;
-    }
+    if (hint) hint.innerHTML = `Vytváříš jako: <strong>${escapeHtml(getCurrentActorNick())}</strong>`;
   } else {
     setHidden(gate, false);
     setHidden(card, true);
@@ -449,7 +512,6 @@ function applyPantsAuthGuard() {
   const adminEnchantCard = document.getElementById("adminEnchantCreatorCard");
 
   setHidden(adminEnchantCard, !isAdmin());
-
   if (!gate || !content) return;
 
   if (isLoggedIn()) {
@@ -462,8 +524,7 @@ function applyPantsAuthGuard() {
 }
 
 function applyPermissions() {
-  const adminOnlyEls = document.querySelectorAll("[data-admin-only]");
-  adminOnlyEls.forEach(el => {
+  document.querySelectorAll("[data-admin-only]").forEach(el => {
     setHidden(el, !isAdmin());
   });
 
@@ -513,9 +574,7 @@ function closeAuthModal() {
 }
 
 function handleBackdropClick(e) {
-  if (e.target.id === "authModal") {
-    closeAuthModal();
-  }
+  if (e.target.id === "authModal") closeAuthModal();
 }
 
 function togglePasswordVisibility() {
@@ -637,7 +696,7 @@ function openPantsCrate() {
   const chance = chanceByTier[chestTier] ?? 8;
 
   pantsState.cratesOpened += 1;
-  const hit = (Math.random() * 100) < chance;
+  const hit = Math.random() * 100 < chance;
   const statusEl = document.getElementById("pantsCrateStatus");
 
   if (hit) {
@@ -703,7 +762,7 @@ function rollNextEnchant(currentEnchants) {
   const hasReallyAlive = existingNames.has("Really Alive");
   const hasExcess = existingNames.has("Excess");
 
-  const isForbiddenTogether = (candidateName) => {
+  const isForbiddenTogether = candidateName => {
     if (candidateName === "Really Alive" && hasExcess) return true;
     if (candidateName === "Excess" && hasReallyAlive) return true;
     return false;
@@ -722,24 +781,18 @@ function rollNextEnchant(currentEnchants) {
   }
 
   if (pool.length === 0) {
-    pool = catalog.filter(
-      e => !existingNames.has(e.name) && !isForbiddenTogether(e.name)
-    );
+    pool = catalog.filter(e => !existingNames.has(e.name) && !isForbiddenTogether(e.name));
   }
-
   if (pool.length === 0) {
     pool = catalog.filter(e => !isForbiddenTogether(e.name));
   }
-
   if (pool.length === 0) return null;
 
   const chosen = pool[Math.floor(Math.random() * pool.length)];
-  const rolledEnchantTier = pickRandomEnchantLevel();
-
   return {
     name: chosen.name,
     rarity: chosen.rarity,
-    level: rolledEnchantTier
+    level: pickRandomEnchantLevel()
   };
 }
 
@@ -764,7 +817,7 @@ function enchantCurrentPantsStep() {
 
   if (p.tier === 3) {
     pantsState.savedPants.unshift({
-      ...structuredClone(p),
+      ...cloneData(p),
       owner: getCurrentActorNick() || "Hráč",
       createdAt: formatNowCzech()
     });
@@ -781,7 +834,6 @@ function addCustomEnchant() {
   if (!isAdmin()) return;
   const name = document.getElementById("newEnchantName").value.trim();
   const rarity = document.getElementById("newEnchantRarity").value;
-
   if (!name) {
     showToast("Vyplň název enchantu.");
     return;
@@ -808,7 +860,7 @@ function removeCustomEnchant(encId) {
 function resetEnchantsToDefault() {
   if (!isAdmin()) return;
   if (!confirm("Obnovit výchozí seznam enchantů?")) return;
-  data.enchantCatalog = structuredClone(DEFAULT_ENCHANT_CATALOG);
+  data.enchantCatalog = cloneData(DEFAULT_ENCHANT_CATALOG);
   saveData();
   showToast("Výchozí enchanty obnoveny.");
 }
@@ -842,7 +894,7 @@ function renderPantsTab() {
         <div class="pants-item-card">
           <div class="player-name">Čeká na drop pantů z bedny</div>
           <p class="muted-text mt-6">
-            Jakmile ti z bedny padnou náhodné panty (<strong>Red</strong>, <strong>Green</strong>, <strong>Blue</strong> nebo <strong>Yellow</strong>), můžeš je zde postupně enchantovat přes <strong>Tier 1 → Tier 2 → Tier 3</strong>. U každého enchantu může padnout libovolný tier (<strong>I</strong>, <strong>II</strong> nebo <strong>III</strong>).
+            Jakmile ti z bedny padnou náhodné panty (<strong>Red</strong>, <strong>Green</strong>, <strong>Blue</strong> nebo <strong>Yellow</strong>), můžeš je zde postupně enchantovat přes <strong>Tier 1 → Tier 2 → Tier 3</strong>.
           </p>
         </div>
       `;
@@ -875,9 +927,7 @@ function renderPantsTab() {
             <span class="obj-badge">${escapeHtml(p.fromChest || "Bedna")}</span>
           </div>
           ${enchantsHtml}
-          <div class="admin-actions">
-            ${actionBtnHtml}
-          </div>
+          <div class="admin-actions">${actionBtnHtml}</div>
         </div>
       `;
     }
@@ -962,29 +1012,25 @@ function getObjectiveProgressInfo(obj) {
   const tierGoal = parseOptionalTierGoal(tiers[activeTier]);
   const rewardCompleted = Boolean(obj.rewardCompleted);
 
-  const rawDone = typeof obj.currentDone === "number" && !Number.isNaN(obj.currentDone)
-    ? Math.max(0, obj.currentDone)
-    : getPlayersSumForObjective(obj.id);
+  const rawDone =
+    typeof obj.currentDone === "number" && !Number.isNaN(obj.currentDone)
+      ? Math.max(0, obj.currentDone)
+      : getPlayersSumForObjective(obj.id);
 
   const doneValue = rewardCompleted && tierGoal ? Math.max(rawDone, tierGoal) : rawDone;
   const pct = rewardCompleted
     ? 100
-    : (tierGoal ? Math.min(100, Math.max(0, Math.round((doneValue / tierGoal) * 100))) : 0);
+    : tierGoal
+      ? Math.min(100, Math.max(0, Math.round((doneValue / tierGoal) * 100)))
+      : 0;
 
-  const missingInCurrentTier = tierGoal
-    ? Math.max(0, tierGoal - doneValue)
-    : null;
-
-  const reachedTier = rewardCompleted || (tierGoal && doneValue >= tierGoal)
-    ? activeTier
-    : Math.max(0, activeTier - 1);
+  const missingInCurrentTier = tierGoal ? Math.max(0, tierGoal - doneValue) : null;
+  const reachedTier =
+    rewardCompleted || (tierGoal && doneValue >= tierGoal) ? activeTier : Math.max(0, activeTier - 1);
 
   let tierBadgeText = `Tier T${activeTier}`;
-  if (rewardCompleted) {
-    tierBadgeText = `🎁 Splněno • T${activeTier}`;
-  } else if (tierGoal && doneValue >= tierGoal) {
-    tierBadgeText = `T${activeTier} splněno`;
-  }
+  if (rewardCompleted) tierBadgeText = `🎁 Splněno • T${activeTier}`;
+  else if (tierGoal && doneValue >= tierGoal) tierBadgeText = `T${activeTier} splněno`;
 
   return {
     activeTier,
@@ -1018,11 +1064,7 @@ function buildRulerHtml(info, unit = "bodů") {
         <div class="ruler-needle" style="left:${markerPos}%" title="${pctText}"></div>
       </div>
       <div class="ruler-ticks">
-        <span>0%</span>
-        <span>25%</span>
-        <span>50%</span>
-        <span>75%</span>
-        <span>100%</span>
+        <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
       </div>
     </div>
   `;
@@ -1041,16 +1083,13 @@ function getTotalChestInfo() {
     ? Math.min(10, Math.max(0, Number(data.totalChestOverride) || 0))
     : clampedSum;
 
-  const formulaText = parts.length > 0
-    ? parts.map(p => `T${p.tier}`).join(" + ") + (rawSum > 10 && !isManual ? ` (součet ${rawSum} → max T10)` : "")
-    : "Žádné objectives (T0)";
+  const formulaText =
+    parts.length > 0
+      ? parts.map(p => `T${p.tier}`).join(" + ") +
+        (rawSum > 10 && !isManual ? ` (součet ${rawSum} → max T10)` : "")
+      : "Žádné objectives (T0)";
 
-  return {
-    totalTier,
-    rawSum,
-    isManual,
-    formulaText
-  };
+  return { totalTier, rawSum, isManual, formulaText };
 }
 
 function getPlayerOverallSharePct(player) {
@@ -1067,6 +1106,7 @@ function getPlayerOverallSharePct(player) {
 
 function renderSortSelect() {
   const select = document.getElementById("sortSelect");
+  if (!select) return;
   const currentVal = select.value;
   select.innerHTML = `
     <option value="share">Největší % podíl</option>
@@ -1104,20 +1144,27 @@ function renderTotalChestBanners() {
 
 function renderObjectives() {
   const tsText = `🕒 Poslední aktualizace: ${data.lastUpdated || "—"}`;
-  document.getElementById("overviewLastUpdated").textContent = tsText;
-  document.getElementById("objLastUpdated").textContent = tsText;
+  const ovTs = document.getElementById("overviewLastUpdated");
+  const objTs = document.getElementById("objLastUpdated");
   const adminTs = document.getElementById("adminLastUpdated");
+  if (ovTs) ovTs.textContent = tsText;
+  if (objTs) objTs.textContent = tsText;
   if (adminTs) adminTs.textContent = tsText;
 
-  document.getElementById("weekSubtitle").textContent =
-    `${data.weekName} • mc.survival-games.cz • Společné objectives a příspěvky členů`;
-  document.getElementById("objTabSubtitle").textContent =
-    `${data.weekName} • Postup guildy a procenta splnění`;
+  const weekSub = document.getElementById("weekSubtitle");
+  const objSub = document.getElementById("objTabSubtitle");
+  if (weekSub) {
+    weekSub.textContent = `${data.weekName} • mc.survival-games.cz • Společné objectives a příspěvky členů`;
+  }
+  if (objSub) {
+    objSub.textContent = `${data.weekName} • Postup guildy a procenta splnění`;
+  }
 
   renderTotalChestBanners();
 
   const strip = document.getElementById("objectivesStrip");
   const detail = document.getElementById("objectivesDetailGrid");
+  if (!strip || !detail) return;
 
   if (data.objectives.length === 0) {
     strip.innerHTML = `
@@ -1189,38 +1236,42 @@ function buildPlayerStatsMiniHtml(player) {
 }
 
 function buildPlayerContribHtml(player) {
-  const goalLine = player.weeklyGoal > 0
-    ? `<div class="obj-progress-top mb-8"><span>🎯 Týdenní cíl: ${getPlayerTotalUnits(player).toLocaleString("cs-CZ")} / ${player.weeklyGoal.toLocaleString("cs-CZ")}</span><strong>${Math.min(100, Math.round((getPlayerTotalUnits(player) / player.weeklyGoal) * 100))} %</strong></div>`
-    : "";
+  const goalLine =
+    player.weeklyGoal > 0
+      ? `<div class="obj-progress-top mb-8"><span>🎯 Týdenní cíl: ${getPlayerTotalUnits(player).toLocaleString("cs-CZ")} / ${player.weeklyGoal.toLocaleString("cs-CZ")}</span><strong>${Math.min(100, Math.round((getPlayerTotalUnits(player) / player.weeklyGoal) * 100))} %</strong></div>`
+      : "";
 
   const statsMini = buildPlayerStatsMiniHtml(player);
-
   if (data.objectives.length === 0) {
     return `${goalLine}<div class="player-sub">Zatím žádné aktivní objectives</div>${statsMini}`;
   }
 
-  return goalLine + data.objectives.map(obj => {
-    const made = getPlayerContrib(player, obj.id);
-    const info = getObjectiveProgressInfo(obj);
-    const playersSum = getPlayersSumForObjective(obj.id);
-    const denom = playersSum > 0 ? playersSum : info.doneValue;
-    const sharePct = denom > 0 ? Math.round((made / denom) * 100) : 0;
-    const barPct = info.tierGoal
-      ? Math.min(100, Math.round((made / info.tierGoal) * 100))
-      : Math.min(100, sharePct);
+  return (
+    goalLine +
+    data.objectives.map(obj => {
+      const made = getPlayerContrib(player, obj.id);
+      const info = getObjectiveProgressInfo(obj);
+      const playersSum = getPlayersSumForObjective(obj.id);
+      const denom = playersSum > 0 ? playersSum : info.doneValue;
+      const sharePct = denom > 0 ? Math.round((made / denom) * 100) : 0;
+      const barPct = info.tierGoal
+        ? Math.min(100, Math.round((made / info.tierGoal) * 100))
+        : Math.min(100, sharePct);
 
-    return `
-      <div class="obj-progress-item">
-        <div class="obj-progress-top">
-          <span>${escapeHtml(obj.title)}</span>
-          <strong>${made.toLocaleString("cs-CZ")} ${escapeHtml(obj.unit)} (${sharePct}%)</strong>
+      return `
+        <div class="obj-progress-item">
+          <div class="obj-progress-top">
+            <span>${escapeHtml(obj.title)}</span>
+            <strong>${made.toLocaleString("cs-CZ")} ${escapeHtml(obj.unit)} (${sharePct}%)</strong>
+          </div>
+          <div class="progress-track">
+            <div class="progress-bar ${info.rewardCompleted ? "reward" : ""}" style="width:${barPct}%"></div>
+          </div>
         </div>
-        <div class="progress-track">
-          <div class="progress-bar ${info.rewardCompleted ? "reward" : ""}" style="width:${barPct}%"></div>
-        </div>
-      </div>
-    `;
-  }).join("") + statsMini;
+      `;
+    }).join("") +
+    statsMini
+  );
 }
 
 function canDeletePlayerComment(comment) {
@@ -1293,12 +1344,10 @@ function openPlayerDetailModal(playerId, preserveInputValue = false) {
 
   document.getElementById("playerModalAvatar").src = getMcHeadUrl(player.nick, 48);
   document.getElementById("playerModalNick").textContent = player.nick;
-  document.getElementById("playerModalMeta").textContent =
-    `${player.rank} • Prestige ${player.prestige}`;
+  document.getElementById("playerModalMeta").textContent = `${player.rank} • Prestige ${player.prestige}`;
 
-  const goalPct = player.weeklyGoal > 0
-    ? Math.min(100, Math.round((totalUnits / player.weeklyGoal) * 100))
-    : null;
+  const goalPct =
+    player.weeklyGoal > 0 ? Math.min(100, Math.round((totalUnits / player.weeklyGoal) * 100)) : null;
 
   const objBreakdown = data.objectives.length
     ? data.objectives.map(obj => {
@@ -1325,9 +1374,7 @@ function openPlayerDetailModal(playerId, preserveInputValue = false) {
             </span>
             <div class="admin-inputs mt-0">
               <span>${escapeHtml(c.createdAt)}</span>
-              ${canDeletePlayerComment(c)
-                ? `<button type="button" class="btn btn-red btn-sm" onclick="deletePlayerComment(${player.id}, '${escapeHtml(c.id)}')">✕</button>`
-                : ""}
+              ${canDeletePlayerComment(c) ? `<button type="button" class="btn btn-red btn-sm" onclick="deletePlayerComment(${player.id}, '${escapeHtml(c.id)}')">✕</button>` : ""}
             </div>
           </div>
           <div class="player-comment-text">${escapeHtml(c.text)}</div>
@@ -1389,13 +1436,13 @@ function closePlayerModal() {
 }
 
 function handlePlayerBackdropClick(e) {
-  if (e.target.id === "playerModal") {
-    closePlayerModal();
-  }
+  if (e.target.id === "playerModal") closePlayerModal();
 }
 
-/* TOP 3 HRÁČI PODLE % PODÍLU */
 function renderPodium() {
+  const podiumGrid = document.getElementById("podiumGrid");
+  if (!podiumGrid) return;
+
   const sorted = data.players
     .map(p => ({
       ...p,
@@ -1408,7 +1455,6 @@ function renderPodium() {
       return (b.prestige || 0) - (a.prestige || 0);
     });
 
-  const podiumGrid = document.getElementById("podiumGrid");
   const medals = ["🥇", "🥈", "🥉"];
   const activeNick = authState.currentUser?.mcNick?.toLowerCase();
 
@@ -1440,10 +1486,12 @@ function renderPodium() {
 
 function renderRoster() {
   renderSortSelect();
+  const rosterGrid = document.getElementById("rosterGrid");
+  if (!rosterGrid) return;
 
-  const search = document.getElementById("searchInput").value.trim().toLowerCase();
-  const rankFilter = document.getElementById("rankFilterSelect").value;
-  const sortBy = document.getElementById("sortSelect").value;
+  const search = (document.getElementById("searchInput")?.value || "").trim().toLowerCase();
+  const rankFilter = document.getElementById("rankFilterSelect")?.value || "all";
+  const sortBy = document.getElementById("sortSelect")?.value || "share";
   const activeNick = authState.currentUser?.mcNick?.toLowerCase();
 
   const list = data.players
@@ -1472,7 +1520,6 @@ function renderRoster() {
       return (b.prestige || 0) - (a.prestige || 0);
     });
 
-  const rosterGrid = document.getElementById("rosterGrid");
   if (list.length === 0) {
     rosterGrid.innerHTML = `<p class="muted-text">Žádný hráč neodpovídá filtru.</p>`;
     return;
@@ -1482,9 +1529,10 @@ function renderRoster() {
     const isMe = activeNick && p.nick.toLowerCase() === activeNick;
     const safeRank = ["Leader", "Co-leader", "Elder", "Member"].includes(p.rank) ? p.rank : "Member";
     const comments = Array.isArray(p.comments) ? p.comments : [];
-    const latestCommentHtml = comments.length > 0
-      ? `<div class="roster-latest-comment">💬 <strong>${escapeHtml(comments[0].author)}:</strong> ${escapeHtml(comments[0].text)}</div>`
-      : "";
+    const latestCommentHtml =
+      comments.length > 0
+        ? `<div class="roster-latest-comment">💬 <strong>${escapeHtml(comments[0].author)}:</strong> ${escapeHtml(comments[0].text)}</div>`
+        : "";
 
     const quickCommentHtml = isLoggedIn()
       ? `
@@ -1537,15 +1585,13 @@ function addAnnouncement() {
     return;
   }
 
-  const authorNick = getCurrentActorNick() || "Člen LAP";
-
   data.announcements.unshift({
     id: `ann_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     title,
     date,
     time,
     desc,
-    author: authorNick,
+    author: getCurrentActorNick() || "Člen LAP",
     pinned,
     createdAt: formatNowCzech(),
     signups: []
@@ -1555,9 +1601,7 @@ function addAnnouncement() {
   document.getElementById("annDate").value = "";
   document.getElementById("annTime").value = "";
   document.getElementById("annDesc").value = "";
-  if (document.getElementById("annPinOnOverview")) {
-    document.getElementById("annPinOnOverview").checked = false;
-  }
+  if (document.getElementById("annPinOnOverview")) document.getElementById("annPinOnOverview").checked = false;
 
   saveData();
   showToast(pinned ? "Oznámení zveřejněno a připnuto na přehled." : "Oznámení zveřejněno.");
@@ -1594,11 +1638,8 @@ function joinAnnouncement(annId, inputPrefix = "roleInput") {
   const existingIdx = ann.signups.findIndex(s => s.nick.toLowerCase() === nick.toLowerCase());
   const entry = { nick, roleNote };
 
-  if (existingIdx >= 0) {
-    ann.signups[existingIdx] = entry;
-  } else {
-    ann.signups.push(entry);
-  }
+  if (existingIdx >= 0) ann.signups[existingIdx] = entry;
+  else ann.signups.push(entry);
 
   saveData();
   showToast("Tvůj plán byl zapsán k oznámení.");
@@ -1618,9 +1659,10 @@ function buildAnnouncementCardHtml(ann, inputPrefix = "roleInput") {
   const scheduleText = `📅 ${formattedDate}${ann.time ? ` • 🕒 ${ann.time}` : ""}`;
   const authorName = ann.author || "Člen LAP";
 
-  const signupsHtml = (ann.signups && ann.signups.length > 0)
-    ? ann.signups.map(s => `<span class="signup-chip"><strong>${escapeHtml(s.nick)}</strong>: ${escapeHtml(s.roleNote)}</span>`).join("")
-    : `<span class="player-sub">Zatím se nikdo nezapsal.</span>`;
+  const signupsHtml =
+    ann.signups && ann.signups.length > 0
+      ? ann.signups.map(s => `<span class="signup-chip"><strong>${escapeHtml(s.nick)}</strong>: ${escapeHtml(s.roleNote)}</span>`).join("")
+      : `<span class="player-sub">Zatím se nikdo nezapsal.</span>`;
 
   const pinBtn = canManageAnnouncementPin(ann)
     ? `<button type="button" class="btn ${ann.pinned ? "btn-gold" : "btn-dark"}" onclick="togglePinAnnouncement('${escapeHtml(ann.id)}')">${ann.pinned ? "📌 Připnuto" : "📌 Připnout na přehled"}</button>`
@@ -1680,16 +1722,14 @@ function renderAnnouncements() {
   }
 
   if (!wrap) return;
-
   if (data.announcements.length === 0) {
     wrap.innerHTML = `<div class="admin-card"><p class="muted-text">Zatím nejsou zveřejněna žádná oznámení.</p></div>`;
     return;
   }
-
   wrap.innerHTML = data.announcements.map(a => buildAnnouncementCardHtml(a, "roleInput")).join("");
 }
 
-/* POLLS (ANO / NE) */
+/* POLLS */
 function addPoll() {
   if (!isLoggedIn()) {
     openAuthModal();
@@ -1706,14 +1746,12 @@ function addPoll() {
     return;
   }
 
-  const authorNick = getCurrentActorNick() || "Člen LAP";
-
   data.polls = data.polls || [];
   data.polls.unshift({
     id: `poll_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     question,
     desc,
-    author: authorNick,
+    author: getCurrentActorNick() || "Člen LAP",
     pinned,
     createdAt: formatNowCzech(),
     votes: {}
@@ -1721,9 +1759,7 @@ function addPoll() {
 
   document.getElementById("pollQuestion").value = "";
   document.getElementById("pollDesc").value = "";
-  if (document.getElementById("pollPinOnOverview")) {
-    document.getElementById("pollPinOnOverview").checked = false;
-  }
+  if (document.getElementById("pollPinOnOverview")) document.getElementById("pollPinOnOverview").checked = false;
 
   saveData();
   showToast(pinned ? "Anketa vytvořena a připnuta na hlavní stránku." : "Anketa vytvořena.");
@@ -1795,13 +1831,15 @@ function buildPollCardHtml(poll) {
     ? `<button type="button" class="btn btn-red" onclick="removePoll('${escapeHtml(poll.id)}')">Smazat</button>`
     : "";
 
-  const yesChipsHtml = yesVoters.length > 0
-    ? yesVoters.map(nick => `<span class="signup-chip">👍 <strong>${escapeHtml(nick)}</strong></span>`).join("")
-    : `<span class="player-sub">Zatím nikdo</span>`;
+  const yesChipsHtml =
+    yesVoters.length > 0
+      ? yesVoters.map(nick => `<span class="signup-chip">👍 <strong>${escapeHtml(nick)}</strong></span>`).join("")
+      : `<span class="player-sub">Zatím nikdo</span>`;
 
-  const noChipsHtml = noVoters.length > 0
-    ? noVoters.map(nick => `<span class="signup-chip">👎 <strong>${escapeHtml(nick)}</strong></span>`).join("")
-    : `<span class="player-sub">Zatím nikdo</span>`;
+  const noChipsHtml =
+    noVoters.length > 0
+      ? noVoters.map(nick => `<span class="signup-chip">👎 <strong>${escapeHtml(nick)}</strong></span>`).join("")
+      : `<span class="player-sub">Zatím nikdo</span>`;
 
   return `
     <div class="poll-card ${poll.pinned ? "pinned" : ""}">
@@ -1880,16 +1918,14 @@ function renderPolls() {
   }
 
   if (!wrap) return;
-
   if (polls.length === 0) {
     wrap.innerHTML = `<div class="admin-card"><p class="muted-text">Zatím nejsou vytvořeny žádné ankety.</p></div>`;
     return;
   }
-
   wrap.innerHTML = polls.map(p => buildPollCardHtml(p)).join("");
 }
 
-/* ADMIN — ÚPLNĚ BASIC ÚPRAVA OBJECTIVES + PROPISOVÁNÍ NA PŘEHLED */
+/* ADMIN */
 function readObjectiveInputs(obj) {
   const safeId = obj.id;
   const titleEl = document.getElementById(`objTitleInput_${safeId}`);
@@ -1902,11 +1938,12 @@ function readObjectiveInputs(obj) {
     ? Math.min(10, Math.max(0, parseInt(tierEl.value, 10) ?? 0))
     : Math.min(10, Math.max(0, Number(obj.activeTier) ?? 0));
 
-  const nextDone = doneEl && doneEl.value.trim() !== ""
-    ? Math.max(0, parseInt(doneEl.value, 10) || 0)
-    : (typeof obj.currentDone === "number" && !Number.isNaN(obj.currentDone)
+  const nextDone =
+    doneEl && doneEl.value.trim() !== ""
+      ? Math.max(0, parseInt(doneEl.value, 10) || 0)
+      : typeof obj.currentDone === "number" && !Number.isNaN(obj.currentDone)
         ? Math.max(0, obj.currentDone)
-        : getPlayersSumForObjective(obj.id));
+        : getPlayersSumForObjective(obj.id);
 
   const nextTiers = Array.isArray(obj.tiers) && obj.tiers.length === 11
     ? [...obj.tiers]
@@ -1916,12 +1953,7 @@ function readObjectiveInputs(obj) {
     nextTiers[nextTier] = parseOptionalTierGoal(targetEl.value);
   }
 
-  return {
-    title: nextTitle,
-    activeTier: nextTier,
-    currentDone: nextDone,
-    tiers: nextTiers
-  };
+  return { title: nextTitle, activeTier: nextTier, currentDone: nextDone, tiers: nextTiers };
 }
 
 function applyObjectiveFormToData(objId, triggerSave = false) {
@@ -1937,14 +1969,10 @@ function applyObjectiveFormToData(objId, triggerSave = false) {
 
   const info = getObjectiveProgressInfo(obj);
   const rulerBox = document.getElementById(`adminObjRuler_${objId}`);
-  if (rulerBox) {
-    rulerBox.innerHTML = buildRulerHtml(info, obj.unit);
-  }
+  if (rulerBox) rulerBox.innerHTML = buildRulerHtml(info, obj.unit);
 
   const cardEl = document.getElementById(`adminObjCard_${objId}`);
-  if (cardEl) {
-    cardEl.classList.toggle("reward-done", info.rewardCompleted);
-  }
+  if (cardEl) cardEl.classList.toggle("reward-done", info.rewardCompleted);
 
   if (triggerSave) {
     saveData(true, true, true);
@@ -1955,16 +1983,15 @@ function applyObjectiveFormToData(objId, triggerSave = false) {
     renderObjectives();
     renderPodium();
     renderRoster();
-    if (!isSyncingFromRemote) {
-      pushRemoteData(data).catch(() => {});
-    }
+    if (!isSyncingFromRemote) pushRemoteData(data).catch(() => {});
   }
 }
 
 function renderAdmin() {
   if (!isAdmin()) return;
 
-  document.getElementById("adminWeekName").value = data.weekName;
+  const weekInput = document.getElementById("adminWeekName");
+  if (weekInput) weekInput.value = data.weekName;
 
   const chest = getTotalChestInfo();
   const totalChestBox = document.getElementById("adminTotalChestBox");
@@ -1989,131 +2016,92 @@ function renderAdmin() {
   }
 
   const objWrap = document.getElementById("adminObjectivesList");
-  if (data.objectives.length === 0) {
-    objWrap.innerHTML = `<p class="muted-text">Zatím nejsou přidány žádné společné objectives.</p>`;
-  } else {
-    objWrap.innerHTML = data.objectives.map((obj, idx) => {
-      const info = getObjectiveProgressInfo(obj);
-      const safeId = escapeHtml(obj.id);
+  if (objWrap) {
+    if (data.objectives.length === 0) {
+      objWrap.innerHTML = `<p class="muted-text">Zatím nejsou přidány žádné společné objectives.</p>`;
+    } else {
+      objWrap.innerHTML = data.objectives.map((obj, idx) => {
+        const info = getObjectiveProgressInfo(obj);
+        const safeId = escapeHtml(obj.id);
+        let tierOptionsHtml = "";
+        for (let t = 0; t <= 10; t++) {
+          tierOptionsHtml += `<option value="${t}" ${info.activeTier === t ? "selected" : ""}>Tier T${t}</option>`;
+        }
 
-      let tierOptionsHtml = "";
-      for (let t = 0; t <= 10; t++) {
-        tierOptionsHtml += `<option value="${t}" ${info.activeTier === t ? "selected" : ""}>Tier T${t}</option>`;
-      }
+        return `
+          <div class="admin-player-item admin-obj-card ${info.rewardCompleted ? "reward-done" : ""}" id="adminObjCard_${safeId}">
+            <div class="admin-inputs mt-0">
+              <strong>#${idx + 1}</strong>
+              <label>
+                Název:
+                <input id="objTitleInput_${safeId}" type="text" value="${escapeHtml(obj.title)}" placeholder="Název objective" oninput="applyObjectiveFormToData('${safeId}', false)" />
+              </label>
+              <label>
+                Tier:
+                <select id="objTierSelect_${safeId}" onchange="setObjectiveActiveTier('${safeId}', this.value)">${tierOptionsHtml}</select>
+              </label>
+              <label>
+                Hotovo:
+                <input id="objDoneInput_${safeId}" type="number" min="0" value="${info.doneValue}" oninput="applyObjectiveFormToData('${safeId}', false)" />
+              </label>
+              <label>
+                Z kolika:
+                <input id="objTargetInput_${safeId}" type="number" min="1" value="${info.tierGoal ?? ""}" placeholder="Zadej cíl" oninput="applyObjectiveFormToData('${safeId}', false)" />
+              </label>
+              <button type="button" class="btn btn-green" onclick="applyObjectiveFormToData('${safeId}', true)">💾 Uložit</button>
+              <button type="button" class="btn ${info.rewardCompleted ? "btn-gold" : "btn-dark"}" onclick="toggleObjectiveRewardCompleted('${safeId}')">🎁 Splněno</button>
+              <button type="button" class="btn btn-red" onclick="removeObjective('${safeId}')">Smazat</button>
+            </div>
+            <div id="adminObjRuler_${safeId}">${buildRulerHtml(info, obj.unit)}</div>
+          </div>
+        `;
+      }).join("");
+    }
+  }
+
+  const playersWrap = document.getElementById("adminPlayersList");
+  if (playersWrap) {
+    const ranks = ["Member", "Elder", "Co-leader", "Leader"];
+    playersWrap.innerHTML = data.players.map(p => {
+      const safeRank = ranks.includes(p.rank) ? p.rank : "Member";
+      const rankOpts = ranks.map(r => `<option value="${r}" ${safeRank === r ? "selected" : ""}>${r}</option>`).join("");
+      const deathsVal = Math.max(0, Number(p.deaths) || 0);
+      const sigilsVal = Math.max(0, Number(p.sigils) || 0);
+      const inputsHtml = data.objectives.length
+        ? data.objectives.map(obj => {
+            const val = getPlayerContrib(p, obj.id);
+            return `
+              <label>
+                ${escapeHtml(obj.title)} (${escapeHtml(obj.unit)}):
+                <input type="number" min="0" value="${val}" onchange="updatePlayerContrib(${p.id}, '${escapeHtml(obj.id)}', this.value)" />
+              </label>
+            `;
+          }).join("")
+        : "";
 
       return `
-        <div class="admin-player-item admin-obj-card ${info.rewardCompleted ? "reward-done" : ""}" id="adminObjCard_${safeId}">
-          <div class="admin-inputs mt-0">
-            <strong>#${idx + 1}</strong>
-            <label>
-              Název:
-              <input
-                id="objTitleInput_${safeId}"
-                type="text"
-                value="${escapeHtml(obj.title)}"
-                placeholder="Název objective"
-                oninput="applyObjectiveFormToData('${safeId}', false)"
-              />
-            </label>
-            <label>
-              Tier:
-              <select id="objTierSelect_${safeId}" onchange="setObjectiveActiveTier('${safeId}', this.value)">
-                ${tierOptionsHtml}
-              </select>
-            </label>
-            <label>
-              Hotovo:
-              <input
-                id="objDoneInput_${safeId}"
-                type="number"
-                min="0"
-                value="${info.doneValue}"
-                oninput="applyObjectiveFormToData('${safeId}', false)"
-              />
-            </label>
-            <label>
-              Z kolika:
-              <input
-                id="objTargetInput_${safeId}"
-                type="number"
-                min="1"
-                value="${info.tierGoal ?? ""}"
-                placeholder="Zadej cíl"
-                oninput="applyObjectiveFormToData('${safeId}', false)"
-              />
-            </label>
-            <button type="button" class="btn btn-green" onclick="applyObjectiveFormToData('${safeId}', true)">💾 Uložit</button>
-            <button type="button" class="btn ${info.rewardCompleted ? "btn-gold" : "btn-dark"}" onclick="toggleObjectiveRewardCompleted('${safeId}')">
-              ${info.rewardCompleted ? "🎁 Splněno" : "🎁 Splněno"}
-            </button>
-            <button type="button" class="btn btn-red" onclick="removeObjective('${safeId}')">Smazat</button>
+        <div class="admin-player-item">
+          <div class="admin-player-head">
+            <img class="skin-head skin-head-sm" src="${getMcHeadUrl(p.nick, 32)}" alt="${escapeHtml(p.nick)}" loading="lazy" onerror="this.src='${FALLBACK_AVATAR}'" />
+            <div>
+              <strong>${escapeHtml(p.nick)}</strong>
+              <span class="rank-pill rank-${safeRank}">${escapeHtml(safeRank)}</span>
+              <span class="player-sub">Prestige ${p.prestige} • Smrti ${deathsVal} • Sigils ${sigilsVal}</span>
+            </div>
           </div>
-
-          <div id="adminObjRuler_${safeId}">
-            ${buildRulerHtml(info, obj.unit)}
+          <div class="admin-inputs">
+            <label>Rank:<select onchange="updatePlayerMeta(${p.id}, 'rank', this.value)">${rankOpts}</select></label>
+            <label>Prestige:<input type="number" min="0" max="100" value="${p.prestige}" onchange="updatePlayerMeta(${p.id}, 'prestige', this.value)" /></label>
+            <label>Týdenní cíl:<input type="number" min="0" value="${p.weeklyGoal || 0}" onchange="updatePlayerMeta(${p.id}, 'weeklyGoal', this.value)" /></label>
+            <label>Smrti:<input type="number" min="0" value="${deathsVal}" onchange="updatePlayerMeta(${p.id}, 'deaths', this.value)" /></label>
+            <label>Sigils:<input type="number" min="0" value="${sigilsVal}" onchange="updatePlayerMeta(${p.id}, 'sigils', this.value)" /></label>
+            ${inputsHtml}
+            <button type="button" class="btn btn-red" onclick="removePlayer(${p.id})">✕</button>
           </div>
         </div>
       `;
     }).join("");
   }
-
-  const playersWrap = document.getElementById("adminPlayersList");
-  const ranks = ["Member", "Elder", "Co-leader", "Leader"];
-
-  playersWrap.innerHTML = data.players.map(p => {
-    const safeRank = ranks.includes(p.rank) ? p.rank : "Member";
-    const rankOpts = ranks.map(r => `<option value="${r}" ${safeRank === r ? "selected" : ""}>${r}</option>`).join("");
-    const deathsVal = Math.max(0, Number(p.deaths) || 0);
-    const sigilsVal = Math.max(0, Number(p.sigils) || 0);
-    const inputsHtml = data.objectives.length
-      ? data.objectives.map(obj => {
-          const val = getPlayerContrib(p, obj.id);
-          return `
-            <label>
-              ${escapeHtml(obj.title)} (${escapeHtml(obj.unit)}):
-              <input type="number" min="0" value="${val}" onchange="updatePlayerContrib(${p.id}, '${escapeHtml(obj.id)}', this.value)" />
-            </label>
-          `;
-        }).join("")
-      : "";
-
-    return `
-      <div class="admin-player-item">
-        <div class="admin-player-head">
-          <img class="skin-head skin-head-sm" src="${getMcHeadUrl(p.nick, 32)}" alt="${escapeHtml(p.nick)}" loading="lazy" onerror="this.src='${FALLBACK_AVATAR}'" />
-          <div>
-            <strong>${escapeHtml(p.nick)}</strong>
-            <span class="rank-pill rank-${safeRank}">${escapeHtml(safeRank)}</span>
-            <span class="player-sub">Prestige ${p.prestige} • Smrti ${deathsVal} • Sigils ${sigilsVal}</span>
-          </div>
-        </div>
-        <div class="admin-inputs">
-          <label>
-            Rank:
-            <select onchange="updatePlayerMeta(${p.id}, 'rank', this.value)">${rankOpts}</select>
-          </label>
-          <label>
-            Prestige:
-            <input type="number" min="0" max="100" value="${p.prestige}" onchange="updatePlayerMeta(${p.id}, 'prestige', this.value)" />
-          </label>
-          <label>
-            Týdenní cíl:
-            <input type="number" min="0" value="${p.weeklyGoal || 0}" onchange="updatePlayerMeta(${p.id}, 'weeklyGoal', this.value)" />
-          </label>
-          <label>
-            Smrti:
-            <input type="number" min="0" value="${deathsVal}" onchange="updatePlayerMeta(${p.id}, 'deaths', this.value)" />
-          </label>
-          <label>
-            Sigils:
-            <input type="number" min="0" value="${sigilsVal}" onchange="updatePlayerMeta(${p.id}, 'sigils', this.value)" />
-          </label>
-          ${inputsHtml}
-          <button type="button" class="btn btn-red" onclick="removePlayer(${p.id})">✕</button>
-        </div>
-      </div>
-    `;
-  }).join("");
 }
 
 function saveWeekName() {
@@ -2157,18 +2145,14 @@ function toggleObjectiveRewardCompleted(objId) {
   const idx = Math.min(10, Math.max(0, Number(obj.activeTier) ?? 0));
   if (nextCompleted) {
     const goal = parseOptionalTierGoal(obj.tiers?.[idx]);
-    if (goal) {
-      obj.currentDone = Math.max(Number(obj.currentDone) || 0, goal);
-    }
+    if (goal) obj.currentDone = Math.max(Number(obj.currentDone) || 0, goal);
     if (idx < 10 && confirm(`Splnění u "${obj.title}" označeno. Posunout tier na T${idx + 1}?`)) {
       obj.activeTier = idx + 1;
       obj.rewardCompleted = false;
     }
   }
   saveData();
-  showToast(obj.rewardCompleted
-    ? `🎁 ${obj.title} označeno jako splněno!`
-    : `Stav u ${obj.title} aktualizován.`);
+  showToast(obj.rewardCompleted ? `🎁 ${obj.title} označeno jako splněno!` : `Stav u ${obj.title} aktualizován.`);
 }
 
 function markAllObjectivesRewardCompleted() {
@@ -2181,9 +2165,7 @@ function markAllObjectivesRewardCompleted() {
     obj.rewardCompleted = true;
     const idx = Math.min(10, Math.max(0, Number(obj.activeTier) ?? 0));
     const goal = parseOptionalTierGoal(obj.tiers?.[idx]);
-    if (goal) {
-      obj.currentDone = Math.max(Number(obj.currentDone) || 0, goal);
-    }
+    if (goal) obj.currentDone = Math.max(Number(obj.currentDone) || 0, goal);
   });
   saveData();
   showToast("🎁 Všechny objectives označeny jako splněno!");
@@ -2216,12 +2198,8 @@ function addObjective() {
 
   document.getElementById("newObjTitle").value = "";
   document.getElementById("newObjUnit").value = "";
-  if (document.getElementById("newObjInitialTier")) {
-    document.getElementById("newObjInitialTier").value = "0";
-  }
-  if (document.getElementById("newObjInitialTarget")) {
-    document.getElementById("newObjInitialTarget").value = "";
-  }
+  if (document.getElementById("newObjInitialTier")) document.getElementById("newObjInitialTier").value = "0";
+  if (document.getElementById("newObjInitialTarget")) document.getElementById("newObjInitialTarget").value = "";
 
   saveData();
   showToast("Objective přidán.");
@@ -2231,9 +2209,7 @@ function removeObjective(objId) {
   if (!isAdmin()) return;
   data.objectives = data.objectives.filter(o => o.id !== objId);
   data.players.forEach(p => {
-    if (p.contrib && objId in p.contrib) {
-      delete p.contrib[objId];
-    }
+    if (p.contrib && objId in p.contrib) delete p.contrib[objId];
   });
   saveData();
   showToast("Objective odebrán.");
@@ -2278,22 +2254,14 @@ function updatePlayerMeta(playerId, field, val) {
   const player = data.players.find(p => p.id === playerId);
   if (!player) return;
 
-  if (field === "rank") {
-    player.rank = val;
-  } else if (field === "prestige") {
-    player.prestige = Math.max(0, Math.min(100, parseInt(val, 10) || 0));
-  } else if (field === "weeklyGoal") {
-    player.weeklyGoal = Math.max(0, parseInt(val, 10) || 0);
-  } else if (field === "deaths") {
-    player.deaths = Math.max(0, parseInt(val, 10) || 0);
-  } else if (field === "sigils") {
-    player.sigils = Math.max(0, parseInt(val, 10) || 0);
-  }
+  if (field === "rank") player.rank = val;
+  else if (field === "prestige") player.prestige = Math.max(0, Math.min(100, parseInt(val, 10) || 0));
+  else if (field === "weeklyGoal") player.weeklyGoal = Math.max(0, parseInt(val, 10) || 0);
+  else if (field === "deaths") player.deaths = Math.max(0, parseInt(val, 10) || 0);
+  else if (field === "sigils") player.sigils = Math.max(0, parseInt(val, 10) || 0);
 
   saveData();
-  if (activePlayerModalId === playerId) {
-    openPlayerDetailModal(playerId, true);
-  }
+  if (activePlayerModalId === playerId) openPlayerDetailModal(playerId, true);
   showToast(`Upraveno u hráče ${player.nick}.`);
 }
 
@@ -2311,9 +2279,7 @@ function updatePlayerContrib(playerId, objId, val) {
 function removePlayer(id) {
   if (!isAdmin()) return;
   data.players = data.players.filter(p => p.id !== id);
-  if (activePlayerModalId === id) {
-    closePlayerModal();
-  }
+  if (activePlayerModalId === id) closePlayerModal();
   saveData();
   showToast("Hráč odebrán.");
 }
@@ -2325,11 +2291,7 @@ function closeWeek() {
   const chest = getTotalChestInfo();
   const objectivesSnapshot = data.objectives.map(obj => {
     const info = getObjectiveProgressInfo(obj);
-    return {
-      ...obj,
-      guildTotal: info.doneValue,
-      reachedTier: info.reachedTier
-    };
+    return { ...obj, guildTotal: info.doneValue, reachedTier: info.reachedTier };
   });
 
   data.history.unshift({
@@ -2348,12 +2310,9 @@ function closeWeek() {
         sigils: p.sigils || 0,
         totalUnits: getPlayerTotalUnits(p),
         sharePct: getPlayerOverallSharePct(p),
-        contrib: structuredClone(p.contrib || {})
+        contrib: cloneData(p.contrib || {})
       }))
-      .sort((a, b) => {
-        if (b.sharePct !== a.sharePct) return b.sharePct - a.sharePct;
-        return b.totalUnits - a.totalUnits;
-      })
+      .sort((a, b) => (b.sharePct !== a.sharePct ? b.sharePct - a.sharePct : b.totalUnits - a.totalUnits))
   });
 
   data.players.forEach(p => {
@@ -2367,7 +2326,6 @@ function closeWeek() {
     obj.rewardCompleted = false;
   });
   data.totalChestOverride = null;
-
   data.weekName = `Týden #${data.history.length + 1} • LAP The Pit`;
   saveData();
   showToast("Týden uložen do historie!");
@@ -2383,6 +2341,7 @@ function deleteHistoryWeek(historyId) {
 
 function renderHistory() {
   const wrap = document.getElementById("historyList");
+  if (!wrap) return;
   if (data.history.length === 0) {
     wrap.innerHTML = `<p class="muted-text text-center">Zatím žádné uzavřené týdny.</p>`;
     return;
@@ -2390,9 +2349,10 @@ function renderHistory() {
 
   wrap.innerHTML = data.history.map(h => {
     const chestLabel = `🎁 Celková bedna: T${h.totalChestTier ?? 0}`;
-    const objsSummary = h.objectives && h.objectives.length > 0
-      ? h.objectives.map(o => `${o.title}: ${o.guildTotal ?? 0} ${o.unit} (Tier T${o.reachedTier ?? 0})`).join(" • ")
-      : "Bez uložených objectives";
+    const objsSummary =
+      h.objectives && h.objectives.length > 0
+        ? h.objectives.map(o => `${o.title}: ${o.guildTotal ?? 0} ${o.unit} (Tier T${o.reachedTier ?? 0})`).join(" • ")
+        : "Bez uložených objectives";
 
     return `
       <div class="admin-card">
@@ -2408,12 +2368,14 @@ function renderHistory() {
         </div>
         <div class="player-sub mb-12">${escapeHtml(objsSummary)}</div>
         ${h.players.map((p, idx) => {
-          const breakdown = h.objectives && h.objectives.length > 0
-            ? h.objectives.map(o => `${o.title}: ${p.contrib?.[o.id] || 0} ${o.unit}`).join(" | ")
-            : `Celkem: ${(p.totalUnits ?? 0).toLocaleString("cs-CZ")}`;
-          const shareLabel = h.objectives && h.objectives.length > 0
-            ? `${p.sharePct} % podíl`
-            : `${(p.totalUnits ?? 0).toLocaleString("cs-CZ")} bodů`;
+          const breakdown =
+            h.objectives && h.objectives.length > 0
+              ? h.objectives.map(o => `${o.title}: ${p.contrib?.[o.id] || 0} ${o.unit}`).join(" | ")
+              : `Celkem: ${(p.totalUnits ?? 0).toLocaleString("cs-CZ")}`;
+          const shareLabel =
+            h.objectives && h.objectives.length > 0
+              ? `${p.sharePct} % podíl`
+              : `${(p.totalUnits ?? 0).toLocaleString("cs-CZ")} bodů`;
           const statsExtra = `💀 ${p.deaths ?? 0} • 🔮 ${p.sigils ?? 0}`;
           return `
             <div class="history-player-row">
@@ -2452,8 +2414,7 @@ function importBackupJson(event) {
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      const parsed = JSON.parse(String(reader.result));
-      data = hydrateData(parsed);
+      data = hydrateData(JSON.parse(String(reader.result)));
       saveData(false);
       showToast("Záloha úspěšně nahrána!");
     } catch {
@@ -2502,9 +2463,7 @@ function renderAll(options = {}) {
   renderPantsTab();
   renderAnnouncements();
   renderPolls();
-  if (!options.skipAdmin) {
-    renderAdmin();
-  }
+  if (!options.skipAdmin) renderAdmin();
   renderHistory();
   applyPermissions();
 }
