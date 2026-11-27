@@ -82,8 +82,8 @@ function initChristmasSnowfall() {
   if (!layer || layer.dataset.initialized === "1") return;
   layer.dataset.initialized = "1";
 
-  const glyphs = ["❄", "❅", "❆", "✦"];
-  const count = window.innerWidth < 640 ? 22 : 38;
+  const glyphs = ["❄", "❅", "❆", "✦", "🎄"];
+  const count = window.innerWidth < 640 ? 24 : 42;
 
   for (let i = 0; i < count; i++) {
     const flake = document.createElement("span");
@@ -91,11 +91,11 @@ function initChristmasSnowfall() {
     flake.textContent = glyphs[i % glyphs.length];
 
     const leftPct = (Math.random() * 100).toFixed(2);
-    const sizePx = (11 + Math.random() * 11).toFixed(1);
+    const sizePx = (11 + Math.random() * 12).toFixed(1);
     const durationSec = (9 + Math.random() * 11).toFixed(2);
     const delaySec = (-Math.random() * 18).toFixed(2);
     const driftPx = ((Math.random() - 0.5) * 90).toFixed(1) + "px";
-    const opacity = (0.35 + Math.random() * 0.55).toFixed(2);
+    const opacity = (0.38 + Math.random() * 0.54).toFixed(2);
 
     flake.style.left = `${leftPct}%`;
     flake.style.fontSize = `${sizePx}px`;
@@ -134,19 +134,67 @@ function createInitialPlayers() {
     ...p,
     deaths: 0,
     sigils: 0,
-    contrib: {},
+    contrib: {
+      obj_xmas_1: Math.floor(Math.random() * 180) + 40,
+      obj_xmas_2: Math.floor(Math.random() * 120) + 20
+    },
     comments: []
   }));
 }
 
+function createInitialObjectives() {
+  return [
+    {
+      id: "obj_xmas_1",
+      title: "VÁNOČNÍ STREAK & KILLS",
+      unit: "bodů",
+      tiers: [1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000],
+      activeTier: 1,
+      currentDone: 620,
+      rewardCompleted: false
+    },
+    {
+      id: "obj_xmas_2",
+      title: "ZIMNÍ QUESTY & EVENTY",
+      unit: "bodů",
+      tiers: [500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500],
+      activeTier: 2,
+      currentDone: 375,
+      rewardCompleted: false
+    }
+  ];
+}
+
 const defaultData = {
-  weekName: "Týden #1 • LAP The Pit",
+  weekName: "Týden #1 • Vánoční LAP The Pit",
   lastUpdated: formatNowCzech(),
   totalChestOverride: null,
   enchantCatalog: cloneData(DEFAULT_ENCHANT_CATALOG),
-  objectives: [],
-  announcements: [],
-  polls: [],
+  objectives: createInitialObjectives(),
+  announcements: [
+    {
+      id: "ann_welcome_xmas",
+      title: "🎄 Vánoční společný event v Pit",
+      date: "",
+      time: "20:00",
+      desc: "Sejdeme se na spawnu a potáhneme společné tiery beden!",
+      author: "Bowmanik",
+      pinned: true,
+      createdAt: formatNowCzech(),
+      signups: [{ nick: "Bowmanik", roleNote: "Vedu event a koordinuji tiery" }]
+    }
+  ],
+  polls: [
+    {
+      id: "poll_welcome_xmas",
+      question: "🎁 Chcete o víkendu udělat vánoční grind na T10 bednu?",
+      desc: "Hlasujte Ano / Ne",
+      author: "Bowmanik",
+      pinned: true,
+      createdAt: formatNowCzech(),
+      votes: { Bowmanik: "yes" }
+    }
+  ],
   players: createInitialPlayers(),
   history: []
 };
@@ -308,6 +356,7 @@ function hydrateData(parsed) {
       : cloneData(DEFAULT_ENCHANT_CATALOG);
 
   const rawPlayers = toArray(src.players);
+  const rawObjectives = toArray(src.objectives);
 
   return {
     ...base,
@@ -316,7 +365,7 @@ function hydrateData(parsed) {
     lastUpdated: src.lastUpdated || formatNowCzech(),
     totalChestOverride: overrideVal,
     enchantCatalog: catalog,
-    objectives: toArray(src.objectives).map(normalizeObjective),
+    objectives: rawObjectives.length > 0 ? rawObjectives.map(normalizeObjective) : base.objectives,
     announcements: toArray(src.announcements).map(a => ({
       ...(a && typeof a === "object" ? a : {}),
       author: String(a?.author || "Člen LAP"),
@@ -348,13 +397,13 @@ function loadData() {
       const raw = window.location.hash.replace("#pit=", "");
       const parsed = JSON.parse(decodeBase64Utf8(raw));
       const hydrated = hydrateData(parsed);
-      localStorage.setItem("lap_pit_data_v16", JSON.stringify(hydrated));
+      localStorage.setItem("lap_pit_data_v17", JSON.stringify(hydrated));
       return hydrated;
     }
     const saved =
+      localStorage.getItem("lap_pit_data_v17") ||
       localStorage.getItem("lap_pit_data_v16") ||
-      localStorage.getItem("lap_pit_data_v15") ||
-      localStorage.getItem("lap_pit_data_v14");
+      localStorage.getItem("lap_pit_data_v15");
     if (!saved) return cloneData(defaultData);
     return hydrateData(JSON.parse(saved));
   } catch {
@@ -386,7 +435,7 @@ function isUserEditingForm() {
 
 function saveData(touchTimestamp = true, syncRemote = true, skipAdminReRender = false) {
   if (touchTimestamp) data.lastUpdated = formatNowCzech();
-  localStorage.setItem("lap_pit_data_v16", JSON.stringify(data));
+  localStorage.setItem("lap_pit_data_v17", JSON.stringify(data));
   renderAll({ skipAdmin: skipAdminReRender });
 
   if (syncRemote && !isSyncingFromRemote) {
@@ -401,7 +450,7 @@ async function initRealtimeSync() {
     const remote = await fetchRemoteData();
     if (remote) {
       data = remote;
-      localStorage.setItem("lap_pit_data_v16", JSON.stringify(data));
+      localStorage.setItem("lap_pit_data_v17", JSON.stringify(data));
       renderAll();
     } else {
       await pushRemoteData(data);
@@ -418,7 +467,7 @@ async function initRealtimeSync() {
       if (JSON.stringify(data) !== JSON.stringify(latest)) {
         isSyncingFromRemote = true;
         data = latest;
-        localStorage.setItem("lap_pit_data_v16", JSON.stringify(data));
+        localStorage.setItem("lap_pit_data_v17", JSON.stringify(data));
         renderAll();
         if (activePlayerModalId !== null) openPlayerDetailModal(activePlayerModalId, true);
         isSyncingFromRemote = false;
@@ -1134,7 +1183,7 @@ function renderObjectives() {
         <div class="card-header-row">
           <div>
             <div class="obj-badges-row">
-              <span class="obj-badge ${info.rewardCompleted ? "reward" : ""}">OBJ ${idx + 1} • ${escapeHtml(info.tierBadgeText)}</span>
+              <span class="obj-badge ${info.rewardCompleted ? "reward" : ""}">🎄 OBJ ${idx + 1} • ${escapeHtml(info.tierBadgeText)}</span>
             </div>
             <div class="player-name">${escapeHtml(obj.title)}</div>
           </div>
@@ -1150,7 +1199,7 @@ function renderObjectives() {
     return `
       <div class="card ${info.rewardCompleted ? "reward-done" : ""}">
         <div class="obj-badges-row">
-          <span class="obj-badge ${info.rewardCompleted ? "reward" : ""}">OBJECTIVE ${idx + 1} • ${escapeHtml(info.tierBadgeText)}</span>
+          <span class="obj-badge ${info.rewardCompleted ? "reward" : ""}">🎄 OBJECTIVE ${idx + 1} • ${escapeHtml(info.tierBadgeText)}</span>
         </div>
         <h3>${escapeHtml(obj.title)}</h3>
         <p class="muted-text mb-6">
@@ -1896,7 +1945,7 @@ function applyObjectiveFormToData(objId, triggerSave = false) {
     showToast(`Uloženo a propsáno na přehled: ${obj.title}`);
   } else {
     data.lastUpdated = formatNowCzech();
-    localStorage.setItem("lap_pit_data_v16", JSON.stringify(data));
+    localStorage.setItem("lap_pit_data_v17", JSON.stringify(data));
     renderObjectives();
     renderPodium();
     renderRoster();
