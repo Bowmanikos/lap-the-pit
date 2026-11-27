@@ -1028,6 +1028,8 @@ function renderSortSelect() {
   select.innerHTML = `
     <option value="total">Největší přínos celkem</option>
     <option value="prestige">Podle Prestige (nejvyšší)</option>
+    <option value="deaths">Nejvíce Smrtí</option>
+    <option value="sigils">Nejvíce Sigils</option>
     <option value="nick">Abecedně (A–Z)</option>
   `;
   data.objectives.forEach((obj, idx) => {
@@ -1449,6 +1451,8 @@ function renderRoster() {
     .sort((a, b) => {
       if (sortBy === "nick") return a.nick.localeCompare(b.nick, "cs");
       if (sortBy === "prestige") return (b.prestige || 0) - (a.prestige || 0);
+      if (sortBy === "deaths") return (b.deaths || 0) - (a.deaths || 0);
+      if (sortBy === "sigils") return (b.sigils || 0) - (a.sigils || 0);
       if (sortBy.startsWith("obj:")) {
         const objId = sortBy.replace("obj:", "");
         return getPlayerContrib(b, objId) - getPlayerContrib(a, objId);
@@ -1769,6 +1773,8 @@ function renderAdmin() {
   playersWrap.innerHTML = data.players.map(p => {
     const safeRank = ranks.includes(p.rank) ? p.rank : "Member";
     const rankOpts = ranks.map(r => `<option value="${r}" ${safeRank === r ? "selected" : ""}>${r}</option>`).join("");
+    const deathsVal = Math.max(0, Number(p.deaths) || 0);
+    const sigilsVal = Math.max(0, Number(p.sigils) || 0);
     const inputsHtml = data.objectives.length
       ? data.objectives.map(obj => {
           const val = getPlayerContrib(p, obj.id);
@@ -1788,7 +1794,7 @@ function renderAdmin() {
           <div>
             <strong>${escapeHtml(p.nick)}</strong>
             <span class="rank-pill rank-${safeRank}">${escapeHtml(safeRank)}</span>
-            <span class="player-sub">Prestige ${p.prestige}</span>
+            <span class="player-sub">Prestige ${p.prestige} • Smrti ${deathsVal} • Sigils ${sigilsVal}</span>
           </div>
         </div>
         <div class="admin-inputs">
@@ -1806,11 +1812,11 @@ function renderAdmin() {
           </label>
           <label>
             Smrti:
-            <input type="number" min="0" value="${p.deaths || 0}" onchange="updatePlayerMeta(${p.id}, 'deaths', this.value)" />
+            <input type="number" min="0" value="${deathsVal}" onchange="updatePlayerMeta(${p.id}, 'deaths', this.value)" />
           </label>
           <label>
             Sigils:
-            <input type="number" min="0" value="${p.sigils || 0}" onchange="updatePlayerMeta(${p.id}, 'sigils', this.value)" />
+            <input type="number" min="0" value="${sigilsVal}" onchange="updatePlayerMeta(${p.id}, 'sigils', this.value)" />
           </label>
           ${inputsHtml}
           <button type="button" class="btn btn-red" onclick="removePlayer(${p.id})">✕</button>
