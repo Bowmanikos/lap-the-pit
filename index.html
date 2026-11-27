@@ -43,6 +43,7 @@
       <button type="button" class="nav-tab" role="tab" aria-selected="false" data-tab="objectives" onclick="switchTab('objectives')">🎯 Objectives</button>
       <button type="button" class="nav-tab" role="tab" aria-selected="false" data-tab="pants" onclick="switchTab('pants')">👖 Pants</button>
       <button type="button" class="nav-tab" role="tab" aria-selected="false" data-tab="announcements" onclick="switchTab('announcements')">📢 Oznámení</button>
+      <button type="button" class="nav-tab" role="tab" aria-selected="false" data-tab="polls" onclick="switchTab('polls')">📊 Ankety</button>
       <button type="button" class="nav-tab" role="tab" aria-selected="false" data-tab="history" onclick="switchTab('history')">📜 Historie týdnů</button>
       <button type="button" class="nav-tab hidden" role="tab" aria-selected="false" data-tab="admin" data-admin-only onclick="switchTab('admin')">🛠️ Správa (Admin)</button>
     </div>
@@ -73,6 +74,13 @@
         </div>
         <div id="pinnedAnnouncementsList"></div>
       </div>
+
+      <div id="pinnedPollsSection" class="mt-28 hidden">
+        <div class="section-title">
+          <span class="bar" aria-hidden="true"></span> 📌 PŘIPNUTÉ ANKETY
+        </div>
+        <div id="pinnedPollsList"></div>
+      </div>
     </section>
 
     <!-- ZÁLOŽKA 2: SEZNAM HRÁČŮ -->
@@ -100,6 +108,8 @@
         <select id="sortSelect" onchange="renderRoster()">
           <option value="total">Největší přínos celkem</option>
           <option value="prestige">Podle Prestige (nejvyšší)</option>
+          <option value="deaths">Nejvíce Smrtí</option>
+          <option value="sigils">Nejvíce Sigils</option>
           <option value="nick">Abecedně (A–Z)</option>
         </select>
       </div>
@@ -257,7 +267,46 @@
       <div id="announcementsList"></div>
     </section>
 
-    <!-- ZÁLOŽKA 6: HISTORIE TÝDNŮ -->
+    <!-- ZÁLOŽKA 6: ANKETY (ANO / NE) -->
+    <section id="tab-polls" class="tab-content">
+      <div class="hero-header">
+        <h1>ANKETY GUILDY • ANO / NE</h1>
+        <p>Hlasování tlačítky Ano nebo Ne, přehled hlasů a možnost připnout anketu na hlavní stránku</p>
+      </div>
+
+      <div id="pollLoginGate" class="admin-card pants-lock-card hidden">
+        <div class="pants-lock-icon" aria-hidden="true">🔐</div>
+        <h3>Pro vytvoření ankety a hlasování je nutné přihlášení</h3>
+        <p class="muted-text mb-14">
+          Přihlas se svým účtem, abys mohl vytvořit anketu nebo hlasovat tlačítky Ano / Ne.
+        </p>
+        <button type="button" class="btn btn-green" onclick="openAuthModal()">🔐 Přihlásit se</button>
+      </div>
+
+      <div class="admin-card" id="pollCreatorCard">
+        <h3>📊 Nová anketa (Ano / Ne)</h3>
+        <p class="muted-text mb-12" id="pollCreatorAuthorHint"></p>
+        <div class="field mb-12">
+          <label for="pollQuestion">Otázka ankety</label>
+          <input type="text" id="pollQuestion" maxlength="160" placeholder="Např. Jdeme dneska v 21:00 hromadně streakovat?" />
+        </div>
+        <div class="field mb-12">
+          <label for="pollDesc">Popis ankety</label>
+          <textarea id="pollDesc" rows="2" maxlength="400" placeholder="Upřesni detaily ankety, pravidla nebo o co přesně jde..."></textarea>
+        </div>
+        <div class="admin-actions mt-0 mb-12">
+          <label class="inline-check">
+            <input type="checkbox" id="pollPinOnOverview" />
+            <span>📌 Připnout anketu na hlavní stránku</span>
+          </label>
+        </div>
+        <button type="button" class="btn btn-green" onclick="addPoll()">➕ Vytvořit anketu</button>
+      </div>
+
+      <div id="pollsList"></div>
+    </section>
+
+    <!-- ZÁLOŽKA 7: HISTORIE TÝDNŮ -->
     <section id="tab-history" class="tab-content">
       <div class="hero-header">
         <h1>HISTORIE TÝDNŮ</h1>
@@ -266,7 +315,7 @@
       <div id="historyList"></div>
     </section>
 
-    <!-- ZÁLOŽKA 7: SPRÁVA (POUZE PRO ADMINA) -->
+    <!-- ZÁLOŽKA 8: SPRÁVA (POUZE PRO ADMINA) -->
     <section id="tab-admin" class="tab-content" data-admin-only>
       <div class="hero-header">
         <h1>SPRÁVA GUILDY LAP</h1>
