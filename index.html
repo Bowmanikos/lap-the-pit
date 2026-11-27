@@ -7,12 +7,15 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <!-- PADající VÁNOČNÍ VLOČKY -->
+  <div id="snowfallLayer" class="snowfall-layer" aria-hidden="true"></div>
+
   <div class="wrap">
     <!-- HLAVIČKA -->
     <header class="card header-card">
       <div class="header-top">
         <div class="brand">
-          <div class="brand-badge">⚔️</div>
+          <div class="brand-badge">🎄</div>
           <div>
             <h1>LAP THE PIT GUILD</h1>
             <p class="subtitle" id="weekSubtitle">Týden #1 • LAP The Pit • mc.survival-games.cz</p>
@@ -31,7 +34,8 @@
       </div>
 
       <nav class="nav-tabs" role="tablist" aria-label="Hlavní navigace">
-        <button type="button" class="nav-tab active" data-tab="overview">📊 Přehled &amp; Žebříček</button>
+        <button type="button" class="nav-tab active" data-tab="overview">📊 Přehled</button>
+        <button type="button" class="nav-tab" data-tab="players">👥 Seznam hráčů</button>
         <button type="button" class="nav-tab" data-tab="objectives">🎯 Objectives</button>
         <button type="button" class="nav-tab" data-tab="pants">👖 Pants</button>
         <button type="button" class="nav-tab" data-tab="announcements">📢 Oznámení</button>
@@ -79,31 +83,38 @@
       <section class="podium-section">
         <div class="section-head">
           <h2>🏆 Top 3 podle % podílu</h2>
-          <span class="muted-text">Řazeno podle procentuálního podílu • Kliknutím otevřeš detail</span>
+          <div class="section-head-actions">
+            <span class="muted-text">Kliknutím otevřeš detail</span>
+            <button type="button" class="btn btn-dark btn-sm" data-goto-tab="players">👥 Celý seznam hráčů →</button>
+          </div>
         </div>
         <div id="podiumGrid" class="podium-grid"></div>
       </section>
-
-      <section>
-        <div class="section-head">
-          <h2>👥 Členové guildy</h2>
-          <div class="controls">
-            <input type="text" id="searchInput" placeholder="🔍 Hledat podle nicku..." />
-            <select id="rankFilterSelect">
-              <option value="all">Všechny ranky</option>
-              <option value="Leader">Leader</option>
-              <option value="Co-leader">Co-leader</option>
-              <option value="Elder">Elder</option>
-              <option value="Member">Member</option>
-            </select>
-            <select id="sortSelect"></select>
-          </div>
-        </div>
-        <div id="rosterGrid" class="roster-grid"></div>
-      </section>
     </section>
 
-    <!-- ZÁLOŽKA 2: OBJECTIVES -->
+    <!-- ZÁLOŽKA 2: SEZNAM HRÁČŮ -->
+    <section id="tab-players" class="tab-content">
+      <div class="section-head">
+        <div>
+          <h2>👥 Seznam hráčů guildy</h2>
+          <p class="muted-text mt-2" id="playersCountSubtitle">Přehled všech členů, příspěvků, statistik a komentářů</p>
+        </div>
+        <div class="controls">
+          <input type="text" id="searchInput" placeholder="🔍 Hledat podle nicku..." />
+          <select id="rankFilterSelect">
+            <option value="all">Všechny ranky</option>
+            <option value="Leader">Leader</option>
+            <option value="Co-leader">Co-leader</option>
+            <option value="Elder">Elder</option>
+            <option value="Member">Member</option>
+          </select>
+          <select id="sortSelect"></select>
+        </div>
+      </div>
+      <div id="rosterGrid" class="roster-grid"></div>
+    </section>
+
+    <!-- ZÁLOŽKA 3: OBJECTIVES -->
     <section id="tab-objectives" class="tab-content">
       <div class="section-head">
         <div>
@@ -116,7 +127,7 @@
       <div id="objectivesDetailGrid" class="objectives-detail-grid"></div>
     </section>
 
-    <!-- ZÁLOŽKA 3: PANTS -->
+    <!-- ZÁLOŽKA 4: PANTS -->
     <section id="tab-pants" class="tab-content">
       <div class="section-head">
         <div>
@@ -198,7 +209,7 @@
       </div>
     </section>
 
-    <!-- ZÁLOŽKA 4: OZNÁMENÍ -->
+    <!-- ZÁLOŽKA 5: OZNÁMENÍ -->
     <section id="tab-announcements" class="tab-content">
       <div class="section-head">
         <div>
@@ -250,7 +261,7 @@
       <div id="announcementsList" class="stack-list mt-16"></div>
     </section>
 
-    <!-- ZÁLOŽKA 5: ANKETY -->
+    <!-- ZÁLOŽKA 6: ANKETY -->
     <section id="tab-polls" class="tab-content">
       <div class="section-head">
         <div>
@@ -294,7 +305,7 @@
       <div id="pollsList" class="stack-list mt-16"></div>
     </section>
 
-    <!-- ZÁLOŽKA 6: HISTORIE -->
+    <!-- ZÁLOŽKA 7: HISTORIE -->
     <section id="tab-history" class="tab-content">
       <div class="section-head">
         <div>
@@ -305,7 +316,7 @@
       <div id="historyList" class="stack-list"></div>
     </section>
 
-    <!-- ZÁLOŽKA 7: SPRÁVA (ADMIN) -->
+    <!-- ZÁLOŽKA 8: SPRÁVA (ADMIN) -->
     <section id="tab-admin" class="tab-content" data-admin-only="true">
       <div class="section-head">
         <div>
