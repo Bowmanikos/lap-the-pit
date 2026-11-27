@@ -33,28 +33,28 @@ const PANTS_COLORS = [
 
 const DEFAULT_ENCHANT_CATALOG = [
   // Common (šedá)
-  { id: "enc_prot", name: "Protection", rarity: "common" },
-  { id: "enc_billy", name: "Billy", rarity: "common" },
-  { id: "enc_dia_allergy", name: "Diamond Allergy", rarity: "common" },
-  { id: "enc_criket", name: "Criket", rarity: "common" },
-  { id: "enc_pebble", name: "Pebble", rarity: "common" },
-  { id: "enc_life_saver", name: "Life Saver", rarity: "common" },
+  { id: "enc_prot", name: "Protection", rarity: "common", desc: "Snižuje příchozí poškození na pantech." },
+  { id: "enc_billy", name: "Billy", rarity: "common", desc: "Zvyšuje odměnu / bonus z poražení hráčů." },
+  { id: "enc_dia_allergy", name: "Diamond Allergy", rarity: "common", desc: "Dává bonus proti hráčům s diamantovou výbavou." },
+  { id: "enc_criket", name: "Criket", rarity: "common", desc: "Zlepšuje mobilitu a obratnost v boji." },
+  { id: "enc_pebble", name: "Pebble", rarity: "common", desc: "Přidává dodatečnou odolnost a drobné bonusy." },
+  { id: "enc_life_saver", name: "Life Saver", rarity: "common", desc: "Pomáhá zachránit tě v kritické situaci." },
 
   // Rare (modrá)
-  { id: "enc_solitude", name: "Solitude", rarity: "rare" },
-  { id: "enc_booboo", name: "Boo-Boo", rarity: "rare" },
-  { id: "enc_counter", name: "Counter-Offensive", rarity: "rare" },
-  { id: "enc_always_ready", name: "Always Ready", rarity: "rare" },
-  { id: "enc_ring_armor", name: "Ring Armor", rarity: "rare" },
-  { id: "enc_coverage", name: "Coverage", rarity: "rare" },
-  { id: "enc_speedrunner", name: "Speedrunner", rarity: "rare" },
+  { id: "enc_solitude", name: "Solitude", rarity: "rare", desc: "Snižuje poškození, když je poblíž méně nepřátel." },
+  { id: "enc_booboo", name: "Boo-Boo", rarity: "rare", desc: "Postupně léčí / regeneruje po utrženém zásahu." },
+  { id: "enc_counter", name: "Counter-Offensive", rarity: "rare", desc: "Zvyšuje poškození po obdržení rány." },
+  { id: "enc_always_ready", name: "Always Ready", rarity: "rare", desc: "Poskytuje okamžitou připravenost a bonusy do boje." },
+  { id: "enc_ring_armor", name: "Ring Armor", rarity: "rare", desc: "Snižuje poškození v určitém bojovém okruhu." },
+  { id: "enc_coverage", name: "Coverage", rarity: "rare", desc: "Zvyšuje celkové krytí a ochranu proti zásahům." },
+  { id: "enc_speedrunner", name: "Speedrunner", rarity: "rare", desc: "Zvyšuje rychlost pohybu a dynamiku hry." },
 
   // Epic (fialová)
-  { id: "enc_not_glad", name: "\"Not\"Gladiator", rarity: "epic" },
-  { id: "enc_excess", name: "Excess", rarity: "epic" },
-  { id: "enc_antivirus", name: "Antivirus", rarity: "epic" },
-  { id: "enc_david_golias", name: "David and Golias", rarity: "epic" },
-  { id: "enc_really_alive", name: "Really Alive", rarity: "epic" }
+  { id: "enc_not_glad", name: "\"Not\"Gladiator", rarity: "epic", desc: "Silný obranný/útočný efekt podle počtu okolních hráčů." },
+  { id: "enc_excess", name: "Excess", rarity: "epic", desc: "Posiluje léčení a efekty nad limit (nelze s Really Alive)." },
+  { id: "enc_antivirus", name: "Antivirus", rarity: "epic", desc: "Chrání před negativními efekty a debuffy." },
+  { id: "enc_david_golias", name: "David and Golias", rarity: "epic", desc: "Zvyšuje poškození proti hráčům s vysokým zdravím/výbavou." },
+  { id: "enc_really_alive", name: "Really Alive", rarity: "epic", desc: "Silný efekt přežití a regenerace (nelze s Excess)." }
 ];
 
 const RARITY_WEIGHTS = {
@@ -118,8 +118,6 @@ const pantsState = {
 };
 
 let data = loadData();
-// Rozpracovaný (neuložený) stav objectives a tierů před potvrzením tlačítkem
-let draftObjectives = structuredClone(data.objectives);
 let isSyncingFromRemote = false;
 
 function getMcHeadUrl(nick, size = 48) {
@@ -161,7 +159,8 @@ function hydrateData(parsed) {
     ? parsed.enchantCatalog.map((e, i) => ({
         id: e.id || `enc_${i}_${Date.now()}`,
         name: String(e.name || "Enchant"),
-        rarity: ["common", "rare", "epic"].includes(e.rarity) ? e.rarity : "common"
+        rarity: ["common", "rare", "epic"].includes(e.rarity) ? e.rarity : "common",
+        desc: String(e.desc || "")
       }))
     : structuredClone(DEFAULT_ENCHANT_CATALOG);
 
@@ -175,11 +174,7 @@ function hydrateData(parsed) {
       ? parsed.objectives.map(normalizeObjective)
       : [],
     announcements: Array.isArray(parsed.announcements)
-      ? parsed.announcements.map(a => ({
-          ...a,
-          author: a.author || "Člen LAP",
-          pinned: Boolean(a.pinned)
-        }))
+      ? parsed.announcements.map(a => ({ ...a, pinned: Boolean(a.pinned) }))
       : [],
     players: Array.isArray(parsed.players)
       ? parsed.players.map(p => ({
@@ -227,12 +222,9 @@ async function pushRemoteData(payload) {
   if (!res.ok) throw new Error("Chyba při zápisu do databáze");
 }
 
-function saveData(touchTimestamp = true, syncRemote = true, syncDraft = true) {
+function saveData(touchTimestamp = true, syncRemote = true) {
   if (touchTimestamp) {
     data.lastUpdated = formatNowCzech();
-  }
-  if (syncDraft) {
-    draftObjectives = structuredClone(data.objectives);
   }
   localStorage.setItem("lap_pit_data_v14", JSON.stringify(data));
   renderAll();
@@ -244,101 +236,11 @@ function saveData(touchTimestamp = true, syncRemote = true, syncDraft = true) {
   }
 }
 
-function hasUnsavedObjectiveChanges() {
-  return JSON.stringify(draftObjectives) !== JSON.stringify(data.objectives);
-}
-
-function updateObjectivesSaveBarUI() {
-  const bar = document.getElementById("objectivesSavePanel");
-  const badge = document.getElementById("objectivesDirtyBadge");
-  const hint = document.getElementById("objectivesDirtyHint");
-  const saveBtn = document.getElementById("saveObjectivesBtn");
-  const discardBtn = document.getElementById("discardObjectivesBtn");
-
-  if (!bar || !badge || !saveBtn || !discardBtn) return;
-
-  const dirty = hasUnsavedObjectiveChanges();
-  bar.classList.toggle("has-changes", dirty);
-  saveBtn.disabled = !dirty;
-  discardBtn.disabled = !dirty;
-
-  if (dirty) {
-    badge.className = "dirty-badge unsaved";
-    badge.textContent = "● Neuložené změny cílů a tierů";
-    if (hint) {
-      hint.textContent = "Máš rozpracované změny u objectives. Klikni na „Uložit cíle do databáze“, aby se uložily a promítly do přehledu.";
-    }
-  } else {
-    badge.className = "dirty-badge saved";
-    badge.textContent = "✓ Vše uloženo v databázi";
-    if (hint) {
-      hint.textContent = "Cíle a tiery v záložce Objectives odpovídají uloženým datům v databázi a přehledu.";
-    }
-  }
-}
-
-function setDraftObjectiveActiveTier(objId, tierVal) {
-  const tierNum = Math.min(10, Math.max(0, parseInt(tierVal, 10) ?? 0));
-  const obj = draftObjectives.find(o => o.id === objId);
-  if (!obj) return;
-  obj.activeTier = tierNum;
-  renderObjectivesTabOnly();
-}
-
-function setDraftObjectiveTierGoal(objId, tierIndex, val) {
-  const idx = Math.min(10, Math.max(0, Number(tierIndex) || 0));
-  const parsedGoal = parseOptionalTierGoal(val);
-  const obj = draftObjectives.find(o => o.id === objId);
-  if (!obj || !Array.isArray(obj.tiers)) return;
-  obj.tiers[idx] = parsedGoal;
-  updateObjectivesSaveBarUI();
-}
-
-function setDraftObjectiveDoneValue(objId, val) {
-  const num = Math.max(0, parseInt(val, 10) || 0);
-  const obj = draftObjectives.find(o => o.id === objId);
-  if (!obj) return;
-  obj.currentDone = num;
-  renderObjectivesTabOnly();
-}
-
-function toggleDraftObjectiveReward(objId) {
-  const obj = draftObjectives.find(o => o.id === objId);
-  if (!obj) return;
-  obj.rewardCompleted = !obj.rewardCompleted;
-  const idx = Math.min(10, Math.max(0, Number(obj.activeTier) ?? 0));
-  if (obj.rewardCompleted) {
-    const goal = parseOptionalTierGoal(obj.tiers?.[idx]);
-    if (goal) {
-      obj.currentDone = Math.max(Number(obj.currentDone) || 0, goal);
-    }
-  }
-  renderObjectivesTabOnly();
-}
-
-function saveObjectivesChanges() {
-  if (!hasUnsavedObjectiveChanges()) {
-    showToast("Žádné nové změny k uložení.");
-    return;
-  }
-  data.objectives = structuredClone(draftObjectives).map(normalizeObjective);
-  saveData(true, true, true);
-  showToast("💾 Cíle a tiery objectives uloženy do databáze a aktualizovány v přehledu!");
-}
-
-function discardObjectivesChanges() {
-  if (!hasUnsavedObjectiveChanges()) return;
-  draftObjectives = structuredClone(data.objectives);
-  renderObjectivesTabOnly();
-  showToast("Rozpracované změny cílů byly vráceny.");
-}
-
 async function initRealtimeSync() {
   try {
     const remote = await fetchRemoteData();
     if (remote) {
       data = remote;
-      draftObjectives = structuredClone(data.objectives);
       localStorage.setItem("lap_pit_data_v14", JSON.stringify(data));
       renderAll();
     } else {
@@ -350,7 +252,6 @@ async function initRealtimeSync() {
 
   setInterval(async () => {
     if (document.hidden) return;
-    if (hasUnsavedObjectiveChanges()) return;
     try {
       const latest = await fetchRemoteData();
       if (!latest) return;
@@ -359,7 +260,6 @@ async function initRealtimeSync() {
       if (currentSerialized !== latestSerialized) {
         isSyncingFromRemote = true;
         data = latest;
-        draftObjectives = structuredClone(data.objectives);
         localStorage.setItem("lap_pit_data_v14", JSON.stringify(data));
         renderAll();
         isSyncingFromRemote = false;
@@ -389,29 +289,6 @@ function isAdmin() {
 
 function isLoggedIn() {
   return Boolean(authState.currentUser);
-}
-
-function getCurrentActorNick() {
-  return authState.currentUser?.mcNick || authState.currentUser?.username || "";
-}
-
-function applyAnnouncementAuthGuard() {
-  const gate = document.getElementById("announcementLoginGate");
-  const card = document.getElementById("announcementCreatorCard");
-  const hint = document.getElementById("annCreatorAuthorHint");
-
-  if (!gate || !card) return;
-
-  if (isLoggedIn()) {
-    gate.style.display = "none";
-    card.style.display = "";
-    if (hint) {
-      hint.innerHTML = `Vytváříš jako: <strong>${getCurrentActorNick()}</strong>`;
-    }
-  } else {
-    gate.style.display = "";
-    card.style.display = "none";
-  }
 }
 
 function applyPantsAuthGuard() {
@@ -468,7 +345,6 @@ function applyPermissions() {
   }
 
   applyPantsAuthGuard();
-  applyAnnouncementAuthGuard();
 }
 
 function openAuthModal() {
@@ -691,7 +567,8 @@ function rollNextEnchant(currentEnchants) {
   return {
     name: chosen.name,
     rarity: chosen.rarity,
-    level: rolledEnchantTier
+    level: rolledEnchantTier,
+    desc: chosen.desc
   };
 }
 
@@ -717,7 +594,7 @@ function enchantCurrentPantsStep() {
   if (p.tier === 3) {
     pantsState.savedPants.unshift({
       ...structuredClone(p),
-      owner: getCurrentActorNick() || "Hráč",
+      owner: authState.currentUser?.mcNick || authState.currentUser?.username || "Hráč",
       createdAt: formatNowCzech()
     });
     saveSavedPants();
@@ -733,6 +610,7 @@ function addCustomEnchant() {
   if (!isAdmin()) return;
   const name = document.getElementById("newEnchantName").value.trim();
   const rarity = document.getElementById("newEnchantRarity").value;
+  const desc = document.getElementById("newEnchantDesc").value.trim() || "Vlastní enchant přidaný adminem.";
 
   if (!name) {
     showToast("Vyplň název enchantu.");
@@ -742,10 +620,12 @@ function addCustomEnchant() {
   data.enchantCatalog.push({
     id: `enc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     name,
-    rarity: ["common", "rare", "epic"].includes(rarity) ? rarity : "common"
+    rarity: ["common", "rare", "epic"].includes(rarity) ? rarity : "common",
+    desc
   });
 
   document.getElementById("newEnchantName").value = "";
+  document.getElementById("newEnchantDesc").value = "";
   saveData();
   showToast(`Enchant "${name}" přidán.`);
 }
@@ -808,6 +688,7 @@ function renderPantsTab() {
                 <strong class="enchant-name-${e.rarity}">${e.name} ${ROMAN_TIERS[e.level]}</strong>
                 <span class="rarity-pill rarity-${e.rarity}">${e.rarity}</span>
               </div>
+              <div class="enchant-desc">${e.desc}</div>
             </div>
           `).join("")
         : `<p class="muted-text" style="margin-top:10px;">Zatím žádné enchanty. Klikni pro enchantnutí na <strong>Tier 1</strong>.</p>`;
@@ -839,9 +720,9 @@ function renderPantsTab() {
   if (catalogGrid) {
     const catalog = data.enchantCatalog || [];
     const byRarity = [
-      { key: "common", title: "⚪ Common Enchanty (Šedá)", items: catalog.filter(e => e.rarity === "common") },
-      { key: "rare", title: "🔵 Rare Enchanty (Modrá)", items: catalog.filter(e => e.rarity === "rare") },
-      { key: "epic", title: "🟣 Epic Enchanty (Fialová)", items: catalog.filter(e => e.rarity === "epic") }
+      { key: "common", title: "⚪ Common Enchanty (Šedá • 60 %)", items: catalog.filter(e => e.rarity === "common") },
+      { key: "rare", title: "🔵 Rare Enchanty (Modrá • 30 %)", items: catalog.filter(e => e.rarity === "rare") },
+      { key: "epic", title: "🟣 Epic Enchanty (Fialová • 10 %)", items: catalog.filter(e => e.rarity === "epic") }
     ];
 
     catalogGrid.innerHTML = byRarity.map(group => `
@@ -853,10 +734,11 @@ function renderPantsTab() {
             <div class="enchant-line-top">
               <strong class="enchant-name-${it.rarity}">${it.name}</strong>
               <div style="display:flex; align-items:center; gap:6px;">
-                <span class="muted-text" style="font-size:0.76rem;">Tier I–III</span>
+                <span class="muted-text" style="font-size:0.76rem;">Tier I–III (náhodně)</span>
                 ${isAdmin() ? `<button type="button" class="btn btn-red" style="padding:2px 7px; font-size:0.72rem;" onclick="removeCustomEnchant('${it.id}')">✕</button>` : ""}
               </div>
             </div>
+            <div class="enchant-desc">${it.desc}</div>
           </div>
         `).join("")}
       </div>
@@ -886,6 +768,7 @@ function renderPantsTab() {
                   <strong class="enchant-name-${e.rarity}">${e.name} ${ROMAN_TIERS[e.level]}</strong>
                   <span class="rarity-pill rarity-${e.rarity}">${e.rarity}</span>
                 </div>
+                <div class="enchant-desc">${e.desc}</div>
               </div>
             `).join("")}
           </div>
@@ -991,8 +874,8 @@ function getObjectiveProgressInfo(obj) {
   };
 }
 
-function getTotalChestInfo(sourceObjectives = data.objectives) {
-  const parts = sourceObjectives.map((obj, idx) => {
+function getTotalChestInfo() {
+  const parts = data.objectives.map((obj, idx) => {
     const t = Math.min(10, Math.max(0, Number(obj.activeTier) ?? 0));
     return { label: `#${idx + 1} ${obj.title}`, tier: t };
   });
@@ -1045,7 +928,7 @@ function renderSortSelect() {
 }
 
 function renderTotalChestBanners() {
-  const chest = getTotalChestInfo(data.objectives);
+  const chest = getTotalChestInfo();
   const bannerHtml = `
     <div>
       <div class="player-sub" style="margin-top:0;">SPOLEČNÁ ODMĚNA GUILDY</div>
@@ -1062,101 +945,6 @@ function renderTotalChestBanners() {
   if (objBanner) objBanner.innerHTML = bannerHtml;
 }
 
-function renderObjectivesTabOnly() {
-  updateObjectivesSaveBarUI();
-  const detail = document.getElementById("objectivesDetailGrid");
-  if (!detail) return;
-
-  if (draftObjectives.length === 0) {
-    detail.innerHTML = `
-      <div class="admin-card">
-        <h3>Zatím žádné společné objectives</h3>
-        <p class="muted-text">Přihlas se jako správce (bowman) a přidej společný objective s tiery T0–T10.</p>
-      </div>
-    `;
-    return;
-  }
-
-  detail.innerHTML = draftObjectives.map((obj, idx) => {
-    const info = getObjectiveProgressInfo(obj);
-    const tierOptionsHtml = Array.from({ length: 11 }, (_, t) =>
-      `<option value="${t}" ${info.activeTier === t ? "selected" : ""}>Tier T${t}</option>`
-    ).join("");
-
-    const tierListHtml = (obj.tiers || EMPTY_TIERS_T0_TO_T10).map((rawGoal, tIdx) => {
-      const goal = parseOptionalTierGoal(rawGoal);
-      const tNum = tIdx;
-      const isCurrent = tNum === info.activeTier;
-      const isDone = tNum < info.activeTier || (tNum === info.activeTier && (info.rewardCompleted || (goal && info.doneValue >= goal)));
-      const statusIcon = isDone ? "✅" : (isCurrent ? "🔥" : "⬜");
-
-      return `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-top:1px solid var(--border); font-size:0.84rem; gap:8px;">
-          <span>${statusIcon} <strong>Tier T${tNum}</strong> ${isCurrent ? "(aktuální)" : ""}</span>
-          <label style="display:inline-flex; align-items:center; gap:6px; color:var(--muted);">
-            <span>Cíl:</span>
-            <input
-              type="number"
-              min="1"
-              class="tier-goal-inline-input"
-              value="${goal ?? ""}"
-              placeholder="—"
-              onchange="setDraftObjectiveTierGoal('${obj.id}', ${tNum}, this.value)"
-            />
-            <span>${obj.unit}</span>
-          </label>
-        </div>
-      `;
-    }).join("");
-
-    const nextTierHint = info.nextTierObj
-      ? `<div class="player-sub" style="margin-bottom:10px;">Do dalšího nastaveného tieru (T${info.nextTierObj.tier}) chybí: <strong>${info.missingToNextTier.toLocaleString("cs-CZ")} ${obj.unit}</strong></div>`
-      : `<div class="player-sub" style="margin-bottom:10px;">Další nastavený tier není zadán</div>`;
-
-    const summaryLine = info.tierGoal
-      ? `Aktuálně v T${info.activeTier}: <strong>${info.doneValue.toLocaleString("cs-CZ")} / ${info.tierGoal.toLocaleString("cs-CZ")} ${obj.unit}</strong> (${info.pct} %) • Chybí: <strong>${info.missingInCurrentTier.toLocaleString("cs-CZ")} ${obj.unit}</strong>`
-      : `Aktuálně v T${info.activeTier}: <strong>${info.doneValue.toLocaleString("cs-CZ")} ${obj.unit}</strong> (cíl bez hodnoty)`;
-
-    return `
-      <div class="admin-card ${info.rewardCompleted ? "reward-done" : ""}">
-        <div class="obj-badges-row">
-          <span class="obj-badge ${info.rewardCompleted ? "reward" : ""}">OBJECTIVE ${idx + 1} • ${info.tierBadgeText}</span>
-        </div>
-        <h3>${obj.title}</h3>
-        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:10px;">
-          <label style="display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; color:var(--muted);">
-            Tier:
-            <select class="tier-select-inline" onchange="setDraftObjectiveActiveTier('${obj.id}', this.value)">
-              ${tierOptionsHtml}
-            </select>
-          </label>
-          <label style="display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; color:var(--muted);">
-            Hotovo:
-            <input
-              type="number"
-              min="0"
-              class="tier-goal-inline-input"
-              value="${info.doneValue}"
-              onchange="setDraftObjectiveDoneValue('${obj.id}', this.value)"
-            />
-          </label>
-          <button
-            type="button"
-            class="btn ${info.rewardCompleted ? "btn-gold" : "btn-dark"}"
-            style="padding:5px 10px; font-size:0.78rem;"
-            onclick="toggleDraftObjectiveReward('${obj.id}')"
-          >
-            ${info.rewardCompleted ? "🎁 Bedna splněna" : "🎁 Označit bednu"}
-          </button>
-        </div>
-        <p class="muted-text" style="margin-bottom:6px;">${summaryLine}</p>
-        ${nextTierHint}
-        ${tierListHtml}
-      </div>
-    `;
-  }).join("");
-}
-
 function renderObjectives() {
   const tsText = `🕒 Poslední aktualizace: ${data.lastUpdated || "—"}`;
   document.getElementById("overviewLastUpdated").textContent = tsText;
@@ -1170,9 +958,9 @@ function renderObjectives() {
     `${data.weekName} • Postup guildy napříč tiery T0 až T10`;
 
   renderTotalChestBanners();
-  renderObjectivesTabOnly();
 
   const strip = document.getElementById("objectivesStrip");
+  const detail = document.getElementById("objectivesDetailGrid");
 
   if (data.objectives.length === 0) {
     strip.innerHTML = `
@@ -1182,6 +970,12 @@ function renderObjectives() {
           <div class="player-name">Zatím nejsou přidány žádné společné objectives.</div>
           <div class="player-sub">Správce (Bowmanik) je může přidat v záložce Správa (Admin).</div>
         </div>
+      </div>
+    `;
+    detail.innerHTML = `
+      <div class="admin-card">
+        <h3>Zatím žádné společné objectives</h3>
+        <p class="muted-text">Přihlas se jako správce (bowman) a přidej společný objective s tiery T0–T10.</p>
       </div>
     `;
     return;
@@ -1215,6 +1009,52 @@ function renderObjectives() {
           <span>${missingText}</span>
           <strong>${info.tierGoal || info.rewardCompleted ? `${info.pct} %` : "—"}</strong>
         </div>
+      </div>
+    `;
+  }).join("");
+
+  detail.innerHTML = data.objectives.map((obj, idx) => {
+    const info = getObjectiveProgressInfo(obj);
+    const tierListHtml = (obj.tiers || EMPTY_TIERS_T0_TO_T10).map((rawGoal, tIdx) => {
+      const goal = parseOptionalTierGoal(rawGoal);
+      const tNum = tIdx;
+      const isCurrent = tNum === info.activeTier;
+      const isDone = tNum < info.activeTier || (tNum === info.activeTier && (info.rewardCompleted || (goal && info.doneValue >= goal)));
+      const statusIcon = isDone ? "✅" : (isCurrent ? "🔥" : "⬜");
+
+      let rightLabel = "Bez hodnoty";
+      if (goal) {
+        const diff = Math.max(0, goal - info.doneValue);
+        rightLabel = isDone
+          ? `${goal.toLocaleString("cs-CZ")} ${obj.unit} (splněno)`
+          : `${goal.toLocaleString("cs-CZ")} ${obj.unit} • chybí ${diff.toLocaleString("cs-CZ")}`;
+      }
+
+      return `
+        <div style="display:flex; justify-content:space-between; padding:5px 0; border-top:1px solid var(--border); font-size:0.84rem; gap:8px;">
+          <span>${statusIcon} <strong>Tier T${tNum}</strong> ${isCurrent ? "(aktuální)" : ""}</span>
+          <span>${rightLabel}</span>
+        </div>
+      `;
+    }).join("");
+
+    const nextTierHint = info.nextTierObj
+      ? `<div class="player-sub" style="margin-bottom:10px;">Do dalšího nastaveného tieru (T${info.nextTierObj.tier}) chybí: <strong>${info.missingToNextTier.toLocaleString("cs-CZ")} ${obj.unit}</strong></div>`
+      : `<div class="player-sub" style="margin-bottom:10px;">Další nastavený tier není zadán</div>`;
+
+    const summaryLine = info.tierGoal
+      ? `Aktuálně v T${info.activeTier}: <strong>${info.doneValue.toLocaleString("cs-CZ")} / ${info.tierGoal.toLocaleString("cs-CZ")} ${obj.unit}</strong> (${info.pct} %) • Chybí: <strong>${info.missingInCurrentTier.toLocaleString("cs-CZ")} ${obj.unit}</strong>`
+      : `Aktuálně v T${info.activeTier}: <strong>${info.doneValue.toLocaleString("cs-CZ")} ${obj.unit}</strong> (cíl bez hodnoty)`;
+
+    return `
+      <div class="admin-card ${info.rewardCompleted ? "reward-done" : ""}">
+        <div class="obj-badges-row">
+          <span class="obj-badge ${info.rewardCompleted ? "reward" : ""}">OBJECTIVE ${idx + 1} • ${info.tierBadgeText}</span>
+        </div>
+        <h3>${obj.title}</h3>
+        <p class="muted-text" style="margin-bottom:6px;">${summaryLine}</p>
+        ${nextTierHint}
+        ${tierListHtml}
       </div>
     `;
   }).join("");
@@ -1412,12 +1252,7 @@ function renderRoster() {
 
 /* ANNOUNCEMENTS */
 function addAnnouncement() {
-  if (!isLoggedIn()) {
-    openAuthModal();
-    showToast("Pro vytvoření oznámení se musíš přihlásit.");
-    return;
-  }
-
+  if (!isAdmin()) return;
   const title = document.getElementById("annTitle").value.trim();
   const date = document.getElementById("annDate").value;
   const time = document.getElementById("annTime").value;
@@ -1429,15 +1264,12 @@ function addAnnouncement() {
     return;
   }
 
-  const authorNick = getCurrentActorNick() || "Člen LAP";
-
   data.announcements.unshift({
     id: `ann_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     title,
     date,
     time,
     desc,
-    author: authorNick,
     pinned,
     createdAt: formatNowCzech(),
     signups: []
@@ -1455,16 +1287,10 @@ function addAnnouncement() {
   showToast(pinned ? "Oznámení zveřejněno a připnuto na přehled." : "Oznámení zveřejněno.");
 }
 
-function canManageAnnouncementPin(ann) {
-  if (!isLoggedIn()) return false;
-  if (isAdmin()) return true;
-  const current = getCurrentActorNick().toLowerCase();
-  return current && (ann.author || "").toLowerCase() === current;
-}
-
 function togglePinAnnouncement(annId) {
+  if (!isAdmin()) return;
   const ann = data.announcements.find(a => a.id === annId);
-  if (!ann || !canManageAnnouncementPin(ann)) return;
+  if (!ann) return;
   ann.pinned = !ann.pinned;
   saveData();
   showToast(ann.pinned ? "📌 Oznámení připnuto na hlavní přehled." : "Oznámení odepnuto z přehledu.");
@@ -1482,7 +1308,7 @@ function joinAnnouncement(annId, inputPrefix = "roleInput") {
   if (!ann) return;
 
   ann.signups = ann.signups || [];
-  const nick = getCurrentActorNick() || "Hráč";
+  const nick = authState.currentUser.mcNick || authState.currentUser.username;
   const existingIdx = ann.signups.findIndex(s => s.nick.toLowerCase() === nick.toLowerCase());
   const entry = { nick, roleNote };
 
@@ -1508,13 +1334,12 @@ function buildAnnouncementCardHtml(ann, inputPrefix = "roleInput") {
     ? new Date(`${ann.date}T00:00:00`).toLocaleDateString("cs-CZ")
     : "Datum neuvedeno";
   const scheduleText = `📅 ${formattedDate}${ann.time ? ` • 🕒 ${ann.time}` : ""}`;
-  const authorName = ann.author || "Člen LAP";
 
   const signupsHtml = (ann.signups && ann.signups.length > 0)
     ? ann.signups.map(s => `<span class="signup-chip"><strong>${s.nick}</strong>: ${s.roleNote}</span>`).join("")
     : `<span class="player-sub">Zatím se nikdo nezapsal.</span>`;
 
-  const pinBtn = canManageAnnouncementPin(ann)
+  const pinBtn = isAdmin()
     ? `<button type="button" class="btn ${ann.pinned ? "btn-gold" : "btn-dark"}" onclick="togglePinAnnouncement('${ann.id}')">${ann.pinned ? "📌 Připnuto" : "📌 Připnout na přehled"}</button>`
     : "";
 
@@ -1527,10 +1352,6 @@ function buildAnnouncementCardHtml(ann, inputPrefix = "roleInput") {
       <div class="announcement-top">
         <div>
           <h3>${ann.pinned ? "📌 " : ""}${ann.title}</h3>
-          <div class="announcement-author-badge">
-            <img src="${getMcHeadUrl(authorName, 20)}" alt="${authorName}" style="width:18px; height:18px; border-radius:4px;" onerror="this.src='https://mc-heads.net/avatar/MHF_Steve/20'" />
-            <span>Vytvořil: <strong>${authorName}</strong></span>
-          </div>
           <div class="player-sub">Vytvořeno: ${ann.createdAt || "—"}</div>
         </div>
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
@@ -1553,8 +1374,6 @@ function buildAnnouncementCardHtml(ann, inputPrefix = "roleInput") {
 }
 
 function renderAnnouncements() {
-  applyAnnouncementAuthGuard();
-
   const wrap = document.getElementById("announcementsList");
   const pinnedSection = document.getElementById("pinnedAnnouncementsSection");
   const pinnedList = document.getElementById("pinnedAnnouncementsList");
