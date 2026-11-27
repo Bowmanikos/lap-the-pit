@@ -112,25 +112,6 @@
         <div class="last-updated-pill" id="objLastUpdated">🕒 Poslední aktualizace: —</div>
       </div>
       <div id="objTotalChestBanner" class="total-chest-banner"></div>
-
-      <!-- PANEL PRO POTVRZENÍ A ULOŽENÍ CÍLŮ / TIERŮ OBJECTIVES -->
-      <div id="objectivesSavePanel" class="objectives-save-bar">
-        <div class="objectives-save-meta">
-          <span id="objectivesDirtyBadge" class="dirty-badge saved">✓ Vše uloženo v databázi</span>
-          <span id="objectivesDirtyHint" class="muted-text">
-            Úpravy tierů a cílů objectives se uloží do databáze a promítnou do přehledu až po potvrzení.
-          </span>
-        </div>
-        <div class="objectives-save-actions">
-          <button type="button" id="saveObjectivesBtn" class="btn btn-green" onclick="saveObjectivesChanges()" disabled>
-            💾 Uložit cíle do databáze
-          </button>
-          <button type="button" id="discardObjectivesBtn" class="btn btn-dark" onclick="discardObjectivesChanges()" disabled>
-            ↩️ Vrátit změny
-          </button>
-        </div>
-      </div>
-
       <div class="objectives-detail-grid" id="objectivesDetailGrid"></div>
     </section>
 
@@ -195,10 +176,14 @@
             <div class="field">
               <label for="newEnchantRarity">Rarity (barva)</label>
               <select id="newEnchantRarity" class="styled-select">
-                <option value="common">Common (Šedá)</option>
-                <option value="rare">Rare (Modrá)</option>
-                <option value="epic">Epic (Fialová)</option>
+                <option value="common">Common (Šedá • 60 %)</option>
+                <option value="rare">Rare (Modrá • 30 %)</option>
+                <option value="epic">Epic (Fialová • 10 %)</option>
               </select>
+            </div>
+            <div class="field">
+              <label for="newEnchantDesc">Popis / vysvětlení</label>
+              <input type="text" id="newEnchantDesc" placeholder="Popis účinku enchantu..." />
             </div>
           </div>
           <div class="admin-actions" style="margin-top: 6px;">
@@ -233,21 +218,11 @@
     <section id="tab-announcements" class="tab-content">
       <div class="hero-header">
         <h1>OZNÁMENÍ & PLÁN AKCÍ</h1>
-        <p>Co se bude dělat, kdy akce začíná, kdo oznámení vytvořil a kdo se k čemu hlásí</p>
+        <p>Co se bude dělat, kdy akce začíná a kdo se k čemu hlásí</p>
       </div>
 
-      <div id="announcementLoginGate" class="admin-card pants-lock-card" style="display: none;">
-        <div class="pants-lock-icon">🔐</div>
-        <h3>Pro vytvoření oznámení je nutné přihlášení</h3>
-        <p class="muted-text" style="margin-bottom: 14px;">
-          Přihlas se svým účtem, aby bylo vidět, kdo oznámení vytvořil. Číst oznámení může každý.
-        </p>
-        <button type="button" class="btn btn-green" onclick="openAuthModal()">🔐 Přihlásit se</button>
-      </div>
-
-      <div class="admin-card" id="announcementCreatorCard">
-        <h3>📌 Nové oznámení akce</h3>
-        <p class="muted-text" style="margin-bottom: 12px;" id="annCreatorAuthorHint"></p>
+      <div class="admin-card" data-admin-only>
+        <h3>📌 Nové oznámení akce (Admin)</h3>
         <div class="admin-grid">
           <div class="field">
             <label for="annTitle">Co se bude dělat (název akce)</label>
@@ -264,11 +239,11 @@
         </div>
         <div class="field" style="margin-bottom: 12px;">
           <label for="annDesc">Podrobnosti / kdo co bude dělat</label>
-          <input type="text" id="annDesc" placeholder="Např. Vedeme party, sbíráme kills/gold a hlídáme bednu..." />
+          <input type="text" id="annDesc" placeholder="Např. Bowmanik vede party, ostatní sbírají kills/gold a dohlíží na bednu..." />
         </div>
         <div class="admin-actions" style="margin-top: 0; margin-bottom: 12px;">
           <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer;">
-            <input type="checkbox" id="annPinOnOverview" />
+            <input type="checkbox" id="annPinOnOverview" checked />
             <span>📌 Připnout rovnou na hlavní přehled pod přispěvatele</span>
           </label>
         </div>
