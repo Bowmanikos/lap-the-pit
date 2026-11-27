@@ -1959,6 +1959,7 @@ function renderAdmin() {
     objWrap.innerHTML = data.objectives.map((obj, idx) => {
       const info = getObjectiveProgressInfo(obj);
       const isCustomDone = typeof obj.currentDone === "number" && !Number.isNaN(obj.currentDone);
+      const safeId = escapeHtml(obj.id);
 
       let tierOptionsHtml = "";
       for (let t = 0; t <= 10; t++) {
@@ -1967,19 +1968,23 @@ function renderAdmin() {
 
       const tierEditors = (obj.tiers || EMPTY_TIERS_T0_TO_T10).map((rawGoal, tIdx) => {
         const goal = parseOptionalTierGoal(rawGoal);
+        const inputId = `tierInput_${safeId}_${tIdx}`;
         return `
-          <label>
+          <label for="${inputId}">
             T${tIdx}:
             <input
+              id="${inputId}"
               type="number"
               min="1"
               value="${goal ?? ""}"
               placeholder="Cíl"
-              oninput="updateObjectiveTierLive('${escapeHtml(obj.id)}', ${tIdx}, this.value)"
+              oninput="updateObjectiveTierLive('${safeId}', ${tIdx}, this.value)"
             />
           </label>
         `;
       }).join("");
+
+      const activeGoalInputId = `activeGoalInput_${safeId}`;
 
       return `
         <div class="admin-player-item admin-obj-card ${info.rewardCompleted ? "reward-done" : ""}">
@@ -1991,30 +1996,31 @@ function renderAdmin() {
             <div class="admin-inputs">
               <label>
                 Tier:
-                <select onchange="setObjectiveActiveTier('${escapeHtml(obj.id)}', this.value)">
+                <select onchange="setObjectiveActiveTier('${safeId}', this.value)">
                   ${tierOptionsHtml}
                 </select>
               </label>
               <label>
                 Hotovo:
-                <input type="number" min="0" value="${info.doneValue}" onchange="setObjectiveDoneValue('${escapeHtml(obj.id)}', this.value)" />
+                <input type="number" min="0" value="${info.doneValue}" onchange="setObjectiveDoneValue('${safeId}', this.value)" />
               </label>
-              <label>
+              <label for="${activeGoalInputId}">
                 Z kolika:
                 <input
+                  id="${activeGoalInputId}"
                   type="number"
                   min="1"
                   value="${info.tierGoal ?? ""}"
                   placeholder="Zadej cíl"
-                  oninput="updateObjectiveTierLive('${escapeHtml(obj.id)}', ${info.activeTier}, this.value)"
+                  oninput="syncActiveGoalToTier('${safeId}', ${info.activeTier}, this.value)"
                 />
               </label>
-              <button type="button" class="btn btn-green" onclick="saveObjectiveTiersNow('${escapeHtml(obj.id)}')">💾 Uložit cíle</button>
-              <button type="button" class="btn ${info.rewardCompleted ? "btn-gold" : "btn-dark"}" onclick="toggleObjectiveRewardCompleted('${escapeHtml(obj.id)}')">
+              <button type="button" class="btn btn-green" onclick="saveObjectiveTiersNow('${safeId}')">💾 Uložit cíle</button>
+              <button type="button" class="btn ${info.rewardCompleted ? "btn-gold" : "btn-dark"}" onclick="toggleObjectiveRewardCompleted('${safeId}')">
                 ${info.rewardCompleted ? "🎁 Bedna splněna (zrušit)" : "🎁 Reward bedna splněna"}
               </button>
-              ${isCustomDone ? `<button type="button" class="btn btn-dark" onclick="resetObjectiveDoneAuto('${escapeHtml(obj.id)}')">Auto součet hráčů</button>` : ""}
-              <button type="button" class="btn btn-red" onclick="removeObjective('${escapeHtml(obj.id)}')">Smazat</button>
+              ${isCustomDone ? `<button type="button" class="btn btn-dark" onclick="resetObjectiveDoneAuto('${safeId}')">Auto součet hráčů</button>` : ""}
+              <button type="button" class="btn btn-red" onclick="removeObjective('${safeId}')">Smazat</button>
             </div>
           </div>
           <div class="admin-inputs admin-tier-row">
@@ -2181,6 +2187,14 @@ function resetObjectiveDoneAuto(objId) {
   }
 }
 
+function persistObjectiveTiersSilently() {
+  data.lastUpdated = formatNowCzech();
+  localStorage.setItem("lap_pit_data_v15", JSON.stringify(data));
+  if (!isSyncingFromRemote) {
+    pushRemoteData(data).catch(() => {});
+  }
+}
+
 function updateObjectiveTierLive(objId, tierIndex, val) {
   if (!isAdmin()) return;
   const idx = Math.min(10, Math.max(0, Number(tierIndex) || 0));
@@ -2191,17 +2205,60 @@ function updateObjectiveTierLive(objId, tierIndex, val) {
     obj.tiers = [...EMPTY_TIERS_T0_TO_T10];
   }
   obj.tiers[idx] = parsedGoal;
-  data.lastUpdated = formatNowCzech();
-  localStorage.setItem("lap_pit_data_v15", JSON.stringify(data));
-  if (!isSyncingFromRemote) {
-    pushRemoteData(data).catch(() => {});
+
+  if (obj.activeTier === idx) {
+    const activeInput = document.getElementById(`activeGoalInput_${objId}`);
+    if (activeInput && activeInput.value !== String(val)) {
+      activeInput.value = val;
+    }
   }
+  persistObjectiveTiersSilently();
+}
+
+function syncActiveGoalToTier(objId, activeTier, val) {
+  if (!isAdmin()) return;
+  const idx = Math.min(10, Math.max(0, Number(activeTier) || 0));
+  const parsedGoal = parseOptionalTierGoal(val);
+  const obj = data.objectives.find(o => o.id === objId);
+  if (!obj) return;
+  if (!Array.isArray(obj.tiers)) {
+    obj.tiers = [...EMPTY_TIERS_T0_TO_T10];
+  }
+  obj.tiers[idx] = parsedGoal;
+
+  const tierInput = document.getElementById(`tierInput_${objId}_${idx}`);
+  if (tierInput && tierInput.value !== String(val)) {
+    tierInput.value = val;
+  }
+  persistObjectiveTiersSilently();
+}
+
+function collectTiersFromDom(obj) {
+  const nextTiers = [...EMPTY_TIERS_T0_TO_T10];
+  for (let t = 0; t <= 10; t++) {
+    const el = document.getElementById(`tierInput_${obj.id}_${t}`);
+    if (el) {
+      nextTiers[t] = parseOptionalTierGoal(el.value);
+    } else if (Array.isArray(obj.tiers)) {
+      nextTiers[t] = parseOptionalTierGoal(obj.tiers[t]);
+    }
+  }
+
+  const activeGoalEl = document.getElementById(`activeGoalInput_${obj.id}`);
+  if (activeGoalEl && activeGoalEl.value.trim() !== "") {
+    const parsedActive = parseOptionalTierGoal(activeGoalEl.value);
+    if (parsedActive !== null) {
+      nextTiers[obj.activeTier] = parsedActive;
+    }
+  }
+  return nextTiers;
 }
 
 function saveObjectiveTiersNow(objId) {
   if (!isAdmin()) return;
   const obj = data.objectives.find(o => o.id === objId);
   if (!obj) return;
+  obj.tiers = collectTiersFromDom(obj);
   saveData();
   showToast(`Cíle tierů u "${obj.title}" uloženy.`);
 }
