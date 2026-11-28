@@ -150,6 +150,7 @@ body {
   margin: 0;
 }
 
+.mt-0 { margin-top: 0; }
 .mt-2 { margin-top: 2px; }
 .mt-6 { margin-top: 6px; }
 .mt-8 { margin-top: 8px; }
@@ -1077,6 +1078,7 @@ select:focus {
 .pants-item-card.color-green { border-left: 4px solid #22c55e; }
 .pants-item-card.color-blue { border-left: 4px solid #38bdf8; }
 .pants-item-card.color-yellow { border-left: 4px solid #facc15; }
+.pants-item-card.sword-card { border-left: 4px solid #facc15; }
 
 .pants-swatch {
   display: inline-block;
