@@ -232,12 +232,38 @@ const defaultData = {
   history: []
 };
 
-function safeReadSession() {
+function buildVerifiedSession(rawSession) {
+  if (!rawSession || typeof rawSession !== "object") return null;
+  const uname = String(rawSession.username || "").trim().toLowerCase();
+  if (!uname) return null;
+
+  const matchedAcc = ACCOUNTS.find(a => a.username.toLowerCase() === uname);
+  if (!matchedAcc) return null;
+
+  const effectiveRole = matchedAcc.username.toLowerCase() === "bowman" ? "admin" : "user";
+  return {
+    username: matchedAcc.username,
+    mcNick: matchedAcc.mcNick,
+    role: effectiveRole
+  };
+}
+
+function loadAutoLoginSession() {
   try {
-    return JSON.parse(sessionStorage.getItem("lap_pit_session")) || null;
+    const fromLocal = JSON.parse(localStorage.getItem("lap_pit_autologin_session_v1") || "null");
+    const verifiedLocal = buildVerifiedSession(fromLocal);
+    if (verifiedLocal) return verifiedLocal;
+
+    const fromSession = JSON.parse(sessionStorage.getItem("lap_pit_session") || "null");
+    const verifiedSession = buildVerifiedSession(fromSession);
+    if (verifiedSession) {
+      localStorage.setItem("lap_pit_autologin_session_v1", JSON.stringify(verifiedSession));
+      return verifiedSession;
+    }
   } catch {
-    return null;
+    // Ignoruj chybu čtení
   }
+  return null;
 }
 
 function getCurrentUserStorageKey() {
@@ -276,7 +302,7 @@ function setUserSavedItems(storagePrefix, items) {
   localStorage.setItem(key, JSON.stringify(map));
 }
 
-const authState = { currentUser: safeReadSession() };
+const authState = { currentUser: loadAutoLoginSession() };
 
 const pantsState = {
   cratesOpened: 0,
@@ -549,8 +575,11 @@ async function initRealtimeSync() {
 
 function saveSession() {
   if (authState.currentUser) {
-    sessionStorage.setItem("lap_pit_session", JSON.stringify(authState.currentUser));
+    const serialized = JSON.stringify(authState.currentUser);
+    localStorage.setItem("lap_pit_autologin_session_v1", serialized);
+    sessionStorage.setItem("lap_pit_session", serialized);
   } else {
+    localStorage.removeItem("lap_pit_autologin_session_v1");
     sessionStorage.removeItem("lap_pit_session");
   }
   applyPermissions();
