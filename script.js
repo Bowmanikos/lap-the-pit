@@ -1,6 +1,10 @@
 const FIREBASE_DB_URL = "https://lap-web-22840-default-rtdb.firebaseio.com";
 const FIREBASE_PATH = "/lap_pit_guild.json";
 
+const AUTOLOGIN_STORAGE_KEY = "lap_pit_autologin_session_v1";
+const SESSION_STORAGE_KEY = "lap_pit_session";
+const AUTOLOGIN_PREF_KEY = "lap_pit_autologin_pref_v1";
+
 const ACCOUNTS = [
   { username: "bowman", mcNick: "Bowmanik", password: "bowman999", role: "admin" },
   { username: "brumik", mcNick: "Ouwkk", password: "brumik101", role: "user" },
@@ -248,18 +252,33 @@ function buildVerifiedSession(rawSession) {
   };
 }
 
+function loadAutoLoginPreference() {
+  try {
+    const raw = localStorage.getItem(AUTOLOGIN_PREF_KEY);
+    if (raw === null) return true;
+    return raw === "true";
+  } catch {
+    return true;
+  }
+}
+
+function saveAutoLoginPreference(enabled) {
+  try {
+    localStorage.setItem(AUTOLOGIN_PREF_KEY, String(Boolean(enabled)));
+  } catch {
+    // Ignoruj chybu zápisu
+  }
+}
+
 function loadAutoLoginSession() {
   try {
-    const fromLocal = JSON.parse(localStorage.getItem("lap_pit_autologin_session_v1") || "null");
+    const fromLocal = JSON.parse(localStorage.getItem(AUTOLOGIN_STORAGE_KEY) || "null");
     const verifiedLocal = buildVerifiedSession(fromLocal);
     if (verifiedLocal) return verifiedLocal;
 
-    const fromSession = JSON.parse(sessionStorage.getItem("lap_pit_session") || "null");
+    const fromSession = JSON.parse(sessionStorage.getItem(SESSION_STORAGE_KEY) || "null");
     const verifiedSession = buildVerifiedSession(fromSession);
-    if (verifiedSession) {
-      localStorage.setItem("lap_pit_autologin_session_v1", JSON.stringify(verifiedSession));
-      return verifiedSession;
-    }
+    if (verifiedSession) return verifiedSession;
   } catch {
     // Ignoruj chybu čtení
   }
@@ -302,7 +321,10 @@ function setUserSavedItems(storagePrefix, items) {
   localStorage.setItem(key, JSON.stringify(map));
 }
 
-const authState = { currentUser: loadAutoLoginSession() };
+const authState = {
+  currentUser: loadAutoLoginSession(),
+  autologinEnabled: loadAutoLoginPreference()
+};
 
 const pantsState = {
   cratesOpened: 0,
@@ -573,14 +595,22 @@ async function initRealtimeSync() {
   }, 5000);
 }
 
-function saveSession() {
+function saveSession(persistAutologin = authState.autologinEnabled) {
+  authState.autologinEnabled = Boolean(persistAutologin);
+  saveAutoLoginPreference(authState.autologinEnabled);
+
   if (authState.currentUser) {
     const serialized = JSON.stringify(authState.currentUser);
-    localStorage.setItem("lap_pit_autologin_session_v1", serialized);
-    sessionStorage.setItem("lap_pit_session", serialized);
+    sessionStorage.setItem(SESSION_STORAGE_KEY, serialized);
+
+    if (authState.autologinEnabled) {
+      localStorage.setItem(AUTOLOGIN_STORAGE_KEY, serialized);
+    } else {
+      localStorage.removeItem(AUTOLOGIN_STORAGE_KEY);
+    }
   } else {
-    localStorage.removeItem("lap_pit_autologin_session_v1");
-    sessionStorage.removeItem("lap_pit_session");
+    localStorage.removeItem(AUTOLOGIN_STORAGE_KEY);
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
   }
   applyPermissions();
 }
@@ -707,6 +737,12 @@ function openAuthModal() {
   document.getElementById("authUsername").value = "";
   document.getElementById("authPassword").value = "";
   document.getElementById("authPassword").type = "password";
+
+  const autologinCb = document.getElementById("authAutologinCheckbox");
+  if (autologinCb) {
+    autologinCb.checked = loadAutoLoginPreference();
+  }
+
   const fb = document.getElementById("authFeedback");
   fb.textContent = "";
   fb.className = "auth-feedback";
@@ -727,6 +763,8 @@ function submitAuthForm(e) {
   const feedback = document.getElementById("authFeedback");
   const username = document.getElementById("authUsername").value.trim().toLowerCase();
   const password = document.getElementById("authPassword").value;
+  const autologinCb = document.getElementById("authAutologinCheckbox");
+  const wantAutologin = autologinCb ? Boolean(autologinCb.checked) : true;
 
   const found = ACCOUNTS.find(
     acc => acc.username.toLowerCase() === username && acc.password === password
@@ -740,9 +778,9 @@ function submitAuthForm(e) {
 
   const effectiveRole = found.username.toLowerCase() === "bowman" ? "admin" : "user";
   authState.currentUser = { username: found.username, mcNick: found.mcNick, role: effectiveRole };
-  saveSession();
+  saveSession(wantAutologin);
 
-  feedback.textContent = `Přihlášeno jako ${found.mcNick} (${effectiveRole}).`;
+  feedback.textContent = `Přihlášeno jako ${found.mcNick} (${effectiveRole})${wantAutologin ? " • autologin zapnut" : ""}.`;
   feedback.className = "auth-feedback ok";
 
   renderAll();
@@ -758,7 +796,7 @@ function logoutUser() {
   authState.currentUser = null;
   pantsState.currentPants = null;
   swordsState.currentSword = null;
-  saveSession();
+  saveSession(authState.autologinEnabled);
   renderAll();
   if (activePlayerModalId !== null) openPlayerDetailModal(activePlayerModalId, true);
   showToast("Byl jsi odhlášen.");
