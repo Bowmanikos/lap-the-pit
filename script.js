@@ -50,6 +50,38 @@ const DEFAULT_ENCHANT_CATALOG = [
   { id: "enc_really_alive", name: "Really Alive", rarity: "epic" }
 ];
 
+const DEFAULT_SWORD_ENCHANT_CATALOG = [
+  // Common (60 %)
+  { id: "sw_xp_bump", name: "XP Bump", rarity: "common" },
+  { id: "sw_bounty_reaper", name: "Bounty Reaper", rarity: "common" },
+  { id: "sw_sharp", name: "Sharp", rarity: "common" },
+  { id: "sw_counter_janitor", name: "Counter-Janitor", rarity: "common" },
+  { id: "sw_beat_spammer", name: "Beat The Spammer", rarity: "common" },
+  { id: "sw_king_buster", name: "King Buster", rarity: "common" },
+  { id: "sw_gold_boosted", name: "Gold and Boosted", rarity: "common" },
+  { id: "sw_revengeance", name: "Revengeance", rarity: "common" },
+  { id: "sw_speedy_kill", name: "Speedy Kill", rarity: "common" },
+  { id: "sw_gold_bump", name: "Gold Bump", rarity: "common" },
+  // Rare (30 %)
+  { id: "sw_diamond_stomp", name: "Diamond Stomp", rarity: "rare" },
+  { id: "sw_lifesteal", name: "Lifesteal", rarity: "rare" },
+  { id: "sw_pain_focus", name: "Pain Focus", rarity: "rare" },
+  { id: "sw_guts", name: "Guts", rarity: "rare" },
+  { id: "sw_speedy_hit", name: "Speedy Hit", rarity: "rare" },
+  { id: "sw_berserker", name: "Berserker", rarity: "rare" },
+  { id: "sw_xp_boost", name: "XP Boost", rarity: "rare" },
+  { id: "sw_fancy_raider", name: "Fancy Raider", rarity: "rare" },
+  { id: "sw_equalizer", name: "Equalizer", rarity: "rare" },
+  { id: "sw_gold_boost", name: "Gold Boost", rarity: "rare" },
+  // Epic (10 %)
+  { id: "sw_healer", name: "Healer", rarity: "epic" },
+  { id: "sw_wasp", name: "Wasp", rarity: "epic" },
+  { id: "sw_billionaire", name: "Billionaire", rarity: "epic" },
+  { id: "sw_executioner", name: "Executioner", rarity: "epic" },
+  { id: "sw_wolf_pack", name: "Wolf Pack", rarity: "epic" },
+  { id: "sw_shark", name: "Shark", rarity: "epic" }
+];
+
 const RARITY_WEIGHTS = { common: 60, rare: 30, epic: 10 };
 const ROMAN_TIERS = ["", "I", "II", "III"];
 const EMPTY_TIERS_T0_TO_T10 = Array(11).fill(null);
@@ -170,6 +202,7 @@ const defaultData = {
   lastUpdated: formatNowCzech(),
   totalChestOverride: null,
   enchantCatalog: cloneData(DEFAULT_ENCHANT_CATALOG),
+  swordEnchantCatalog: cloneData(DEFAULT_SWORD_ENCHANT_CATALOG),
   objectives: createInitialObjectives(),
   announcements: [
     {
@@ -216,12 +249,28 @@ function safeReadSavedPants() {
   }
 }
 
+function safeReadSavedSwords() {
+  try {
+    const arr = JSON.parse(localStorage.getItem("lap_pit_saved_swords_v1"));
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
 const authState = { currentUser: safeReadSession() };
+
 const pantsState = {
   cratesOpened: 0,
   pantsDroppedCount: 0,
   currentPants: null,
   savedPants: safeReadSavedPants()
+};
+
+const swordsState = {
+  swordsStartedCount: 0,
+  currentSword: null,
+  savedSwords: safeReadSavedSwords()
 };
 
 let data = loadData();
@@ -336,6 +385,16 @@ function toArray(val) {
   return [];
 }
 
+function hydrateCatalog(rawList, fallbackList, prefix = "enc") {
+  const arr = toArray(rawList);
+  if (arr.length === 0) return cloneData(fallbackList);
+  return arr.map((e, i) => ({
+    id: String(e?.id || `${prefix}_${i}`),
+    name: String(e?.name || "Enchant"),
+    rarity: ["common", "rare", "epic"].includes(e?.rarity) ? e.rarity : "common"
+  }));
+}
+
 function hydrateData(parsed) {
   const base = cloneData(defaultData);
   const src = parsed && typeof parsed === "object" ? parsed : {};
@@ -345,15 +404,8 @@ function hydrateData(parsed) {
       ? null
       : Math.min(10, Math.max(0, Number(src.totalChestOverride) || 0));
 
-  const rawCatalog = toArray(src.enchantCatalog);
-  const catalog =
-    rawCatalog.length > 0
-      ? rawCatalog.map((e, i) => ({
-          id: String(e?.id || `enc_${i}`),
-          name: String(e?.name || "Enchant"),
-          rarity: ["common", "rare", "epic"].includes(e?.rarity) ? e.rarity : "common"
-        }))
-      : cloneData(DEFAULT_ENCHANT_CATALOG);
+  const catalog = hydrateCatalog(src.enchantCatalog, DEFAULT_ENCHANT_CATALOG, "enc");
+  const swordCatalog = hydrateCatalog(src.swordEnchantCatalog, DEFAULT_SWORD_ENCHANT_CATALOG, "sw");
 
   const rawPlayers = toArray(src.players);
   const rawObjectives = toArray(src.objectives);
@@ -365,6 +417,7 @@ function hydrateData(parsed) {
     lastUpdated: src.lastUpdated || formatNowCzech(),
     totalChestOverride: overrideVal,
     enchantCatalog: catalog,
+    swordEnchantCatalog: swordCatalog,
     objectives: rawObjectives.length > 0 ? rawObjectives.map(normalizeObjective) : base.objectives,
     announcements: toArray(src.announcements).map(a => ({
       ...(a && typeof a === "object" ? a : {}),
@@ -397,13 +450,13 @@ function loadData() {
       const raw = window.location.hash.replace("#pit=", "");
       const parsed = JSON.parse(decodeBase64Utf8(raw));
       const hydrated = hydrateData(parsed);
-      localStorage.setItem("lap_pit_data_v17", JSON.stringify(hydrated));
+      localStorage.setItem("lap_pit_data_v18", JSON.stringify(hydrated));
       return hydrated;
     }
     const saved =
+      localStorage.getItem("lap_pit_data_v18") ||
       localStorage.getItem("lap_pit_data_v17") ||
-      localStorage.getItem("lap_pit_data_v16") ||
-      localStorage.getItem("lap_pit_data_v15");
+      localStorage.getItem("lap_pit_data_v16");
     if (!saved) return cloneData(defaultData);
     return hydrateData(JSON.parse(saved));
   } catch {
@@ -435,7 +488,7 @@ function isUserEditingForm() {
 
 function saveData(touchTimestamp = true, syncRemote = true, skipAdminReRender = false) {
   if (touchTimestamp) data.lastUpdated = formatNowCzech();
-  localStorage.setItem("lap_pit_data_v17", JSON.stringify(data));
+  localStorage.setItem("lap_pit_data_v18", JSON.stringify(data));
   renderAll({ skipAdmin: skipAdminReRender });
 
   if (syncRemote && !isSyncingFromRemote) {
@@ -450,7 +503,7 @@ async function initRealtimeSync() {
     const remote = await fetchRemoteData();
     if (remote) {
       data = remote;
-      localStorage.setItem("lap_pit_data_v17", JSON.stringify(data));
+      localStorage.setItem("lap_pit_data_v18", JSON.stringify(data));
       renderAll();
     } else {
       await pushRemoteData(data);
@@ -467,7 +520,7 @@ async function initRealtimeSync() {
       if (JSON.stringify(data) !== JSON.stringify(latest)) {
         isSyncingFromRemote = true;
         data = latest;
-        localStorage.setItem("lap_pit_data_v17", JSON.stringify(data));
+        localStorage.setItem("lap_pit_data_v18", JSON.stringify(data));
         renderAll();
         if (activePlayerModalId !== null) openPlayerDetailModal(activePlayerModalId, true);
         isSyncingFromRemote = false;
@@ -480,6 +533,10 @@ async function initRealtimeSync() {
 
 function saveSavedPants() {
   localStorage.setItem("lap_pit_saved_pants_v1", JSON.stringify(pantsState.savedPants));
+}
+
+function saveSavedSwords() {
+  localStorage.setItem("lap_pit_saved_swords_v1", JSON.stringify(swordsState.savedSwords));
 }
 
 function saveSession() {
@@ -556,6 +613,23 @@ function applyPantsAuthGuard() {
   }
 }
 
+function applySwordsAuthGuard() {
+  const gate = document.getElementById("swordsAuthGate");
+  const content = document.getElementById("swordsAuthenticatedContent");
+  const adminSwordCard = document.getElementById("adminSwordEnchantCreatorCard");
+
+  setHidden(adminSwordCard, !isAdmin());
+  if (!gate || !content) return;
+
+  if (isLoggedIn()) {
+    setHidden(gate, true);
+    setHidden(content, false);
+  } else {
+    setHidden(gate, false);
+    setHidden(content, true);
+  }
+}
+
 function applyPermissions() {
   document.querySelectorAll("[data-admin-only]").forEach(el => {
     setHidden(el, !isAdmin());
@@ -587,6 +661,7 @@ function applyPermissions() {
   if (!isAdmin() && adminTab?.classList.contains("active")) switchTab("overview");
 
   applyPantsAuthGuard();
+  applySwordsAuthGuard();
   applyAnnouncementAuthGuard();
   applyPollAuthGuard();
 }
@@ -630,6 +705,7 @@ function submitAuthForm(e) {
   authState.currentUser = { username: found.username, mcNick: found.mcNick, role: effectiveRole };
   saveSession();
   renderPantsTab();
+  renderSwordsTab();
   feedback.textContent = `Přihlášeno jako ${found.mcNick} (${effectiveRole}).`;
   feedback.className = "auth-feedback ok";
   renderPodium();
@@ -648,6 +724,7 @@ function logoutUser() {
   authState.currentUser = null;
   saveSession();
   renderPantsTab();
+  renderSwordsTab();
   renderPodium();
   renderRoster();
   renderAnnouncements();
@@ -663,14 +740,15 @@ function switchTab(tab) {
     return;
   }
 
-  if (tab === "pants" && !isLoggedIn()) {
+  if ((tab === "pants" || tab === "swords") && !isLoggedIn()) {
     applyPantsAuthGuard();
+    applySwordsAuthGuard();
     document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
     document.querySelectorAll(".nav-tab").forEach(el => el.classList.remove("active"));
-    document.getElementById("tab-pants")?.classList.add("active");
-    document.querySelector('.nav-tab[data-tab="pants"]')?.classList.add("active");
+    document.getElementById(`tab-${tab}`)?.classList.add("active");
+    document.querySelector(`.nav-tab[data-tab="${tab}"]`)?.classList.add("active");
     openAuthModal();
-    showToast("Pro vstup do sekce Pants se musíš přihlásit.");
+    showToast(`Pro vstup do sekce ${tab === "swords" ? "Swords" : "Pants"} se musíš přihlásit.`);
     return;
   }
 
@@ -679,6 +757,79 @@ function switchTab(tab) {
 
   document.getElementById(`tab-${tab}`)?.classList.add("active");
   document.querySelector(`.nav-tab[data-tab="${tab}"]`)?.classList.add("active");
+}
+
+/* SHARED ENCHANT ROLLER */
+function pickRandomRarity() {
+  const total = RARITY_WEIGHTS.common + RARITY_WEIGHTS.rare + RARITY_WEIGHTS.epic;
+  let r = Math.random() * total;
+  if (r < RARITY_WEIGHTS.common) return "common";
+  r -= RARITY_WEIGHTS.common;
+  if (r < RARITY_WEIGHTS.rare) return "rare";
+  return "epic";
+}
+
+function rollEnchantFromCatalog(catalog, currentEnchants, checkPantsIncompatibilities = false) {
+  if (!Array.isArray(catalog) || catalog.length === 0) return null;
+
+  const existingNames = new Set(currentEnchants.map(e => e.name));
+  const hasReallyAlive = existingNames.has("Really Alive");
+  const hasExcess = existingNames.has("Excess");
+
+  const isForbiddenTogether = candidateName =>
+    checkPantsIncompatibilities &&
+    ((candidateName === "Really Alive" && hasExcess) ||
+      (candidateName === "Excess" && hasReallyAlive));
+
+  let pool = [];
+  for (let attempt = 0; attempt < 25; attempt++) {
+    const rarity = pickRandomRarity();
+    const candidates = catalog.filter(
+      e => e.rarity === rarity && !existingNames.has(e.name) && !isForbiddenTogether(e.name)
+    );
+    if (candidates.length > 0) {
+      pool = candidates;
+      break;
+    }
+  }
+
+  if (pool.length === 0) pool = catalog.filter(e => !existingNames.has(e.name) && !isForbiddenTogether(e.name));
+  if (pool.length === 0) pool = catalog.filter(e => !isForbiddenTogether(e.name));
+  if (pool.length === 0) return null;
+
+  const chosen = pool[Math.floor(Math.random() * pool.length)];
+  return {
+    name: chosen.name,
+    rarity: chosen.rarity,
+    level: Math.floor(Math.random() * 3) + 1
+  };
+}
+
+function buildEnchantCatalogHtml(catalog, deleteAttrName) {
+  const list = Array.isArray(catalog) ? catalog : [];
+  const byRarity = [
+    { key: "common", title: "⚪ Common Enchanty (Šedá • 60 %)", items: list.filter(e => e.rarity === "common") },
+    { key: "rare", title: "🔵 Rare Enchanty (Modrá • 30 %)", items: list.filter(e => e.rarity === "rare") },
+    { key: "epic", title: "🟣 Epic Enchanty (Fialová • 10 %)", items: list.filter(e => e.rarity === "epic") }
+  ];
+
+  return byRarity.map(group => `
+    <div class="pants-item-card">
+      <h3>${escapeHtml(group.title)}</h3>
+      ${group.items.length === 0 ? `<p class="muted-text">Žádné enchanty v této kategorii.</p>` : ""}
+      ${group.items.map(it => `
+        <div class="enchant-line border-${escapeHtml(it.rarity)}">
+          <div class="enchant-line-top">
+            <strong class="enchant-name-${escapeHtml(it.rarity)}">${escapeHtml(it.name)}</strong>
+            <div class="admin-inputs mt-0">
+              <span class="muted-text">Tier I–III</span>
+              ${isAdmin() ? `<button type="button" class="btn btn-red btn-sm" ${deleteAttrName}="${escapeHtml(it.id)}">✕</button>` : ""}
+            </div>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `).join("");
 }
 
 /* PANTS */
@@ -746,51 +897,6 @@ function resetCurrentPants() {
   renderPantsTab();
 }
 
-function pickRandomRarity() {
-  const total = RARITY_WEIGHTS.common + RARITY_WEIGHTS.rare + RARITY_WEIGHTS.epic;
-  let r = Math.random() * total;
-  if (r < RARITY_WEIGHTS.common) return "common";
-  r -= RARITY_WEIGHTS.common;
-  if (r < RARITY_WEIGHTS.rare) return "rare";
-  return "epic";
-}
-
-function rollNextEnchant(currentEnchants) {
-  const catalog = data.enchantCatalog || [];
-  if (catalog.length === 0) return null;
-
-  const existingNames = new Set(currentEnchants.map(e => e.name));
-  const hasReallyAlive = existingNames.has("Really Alive");
-  const hasExcess = existingNames.has("Excess");
-
-  const isForbiddenTogether = candidateName =>
-    (candidateName === "Really Alive" && hasExcess) ||
-    (candidateName === "Excess" && hasReallyAlive);
-
-  let pool = [];
-  for (let attempt = 0; attempt < 25; attempt++) {
-    const rarity = pickRandomRarity();
-    const candidates = catalog.filter(
-      e => e.rarity === rarity && !existingNames.has(e.name) && !isForbiddenTogether(e.name)
-    );
-    if (candidates.length > 0) {
-      pool = candidates;
-      break;
-    }
-  }
-
-  if (pool.length === 0) pool = catalog.filter(e => !existingNames.has(e.name) && !isForbiddenTogether(e.name));
-  if (pool.length === 0) pool = catalog.filter(e => !isForbiddenTogether(e.name));
-  if (pool.length === 0) return null;
-
-  const chosen = pool[Math.floor(Math.random() * pool.length)];
-  return {
-    name: chosen.name,
-    rarity: chosen.rarity,
-    level: Math.floor(Math.random() * 3) + 1
-  };
-}
-
 function enchantCurrentPantsStep() {
   if (!isLoggedIn()) {
     openAuthModal();
@@ -800,7 +906,7 @@ function enchantCurrentPantsStep() {
   const p = pantsState.currentPants;
   if (!p || p.tier >= 3) return;
 
-  const rolled = rollNextEnchant(p.enchants);
+  const rolled = rollEnchantFromCatalog(data.enchantCatalog, p.enchants, true);
   if (!rolled) {
     showToast("V katalogu nejsou dostupné žádné enchanty.");
     return;
@@ -853,7 +959,7 @@ function removeCustomEnchant(encId) {
 
 function resetEnchantsToDefault() {
   if (!isAdmin()) return;
-  if (!confirm("Obnovit výchozí seznam enchantů?")) return;
+  if (!confirm("Obnovit výchozí seznam enchantů pro Pants?")) return;
   data.enchantCatalog = cloneData(DEFAULT_ENCHANT_CATALOG);
   saveData();
   showToast("Výchozí enchanty obnoveny.");
@@ -930,30 +1036,7 @@ function renderPantsTab() {
 
   const catalogGrid = document.getElementById("enchantCatalogGrid");
   if (catalogGrid) {
-    const catalog = data.enchantCatalog || [];
-    const byRarity = [
-      { key: "common", title: "⚪ Common Enchanty (Šedá)", items: catalog.filter(e => e.rarity === "common") },
-      { key: "rare", title: "🔵 Rare Enchanty (Modrá)", items: catalog.filter(e => e.rarity === "rare") },
-      { key: "epic", title: "🟣 Epic Enchanty (Fialová)", items: catalog.filter(e => e.rarity === "epic") }
-    ];
-
-    catalogGrid.innerHTML = byRarity.map(group => `
-      <div class="pants-item-card">
-        <h3>${escapeHtml(group.title)}</h3>
-        ${group.items.length === 0 ? `<p class="muted-text">Žádné enchanty v této kategorii.</p>` : ""}
-        ${group.items.map(it => `
-          <div class="enchant-line border-${escapeHtml(it.rarity)}">
-            <div class="enchant-line-top">
-              <strong class="enchant-name-${escapeHtml(it.rarity)}">${escapeHtml(it.name)}</strong>
-              <div class="admin-inputs mt-0">
-                <span class="muted-text">Tier I–III</span>
-                ${isAdmin() ? `<button type="button" class="btn btn-red btn-sm" data-del-enchant="${escapeHtml(it.id)}">✕</button>` : ""}
-              </div>
-            </div>
-          </div>
-        `).join("")}
-      </div>
-    `).join("");
+    catalogGrid.innerHTML = buildEnchantCatalogHtml(data.enchantCatalog, "data-del-enchant");
   }
 
   const savedGrid = document.getElementById("savedPantsGrid");
@@ -984,6 +1067,212 @@ function renderPantsTab() {
           </div>
         `;
       }).join("");
+    }
+  }
+}
+
+/* SWORDS */
+function startEnchantSword() {
+  if (!isLoggedIn()) {
+    openAuthModal();
+    return;
+  }
+
+  swordsState.swordsStartedCount += 1;
+  swordsState.currentSword = {
+    id: `sword_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    name: "Mystic Sword",
+    tier: 0,
+    enchants: []
+  };
+
+  const statusEl = document.getElementById("swordStatusBox");
+  if (statusEl) {
+    statusEl.className = "pants-status-box hit";
+    statusEl.innerHTML = `⚔️ <strong>Mystic Sword připraven!</strong> Teď ho můžeš enchantovat přes <strong>Tier 1 → Tier 2 → Tier 3</strong>.`;
+  }
+
+  showToast("⚔️ Mystic Sword připraven k enchantování!");
+  renderSwordsTab();
+}
+
+function resetCurrentSword() {
+  if (!isLoggedIn()) {
+    openAuthModal();
+    return;
+  }
+  swordsState.currentSword = null;
+  const statusEl = document.getElementById("swordStatusBox");
+  if (statusEl) {
+    statusEl.className = "pants-status-box";
+    statusEl.innerHTML = `Klikni na <strong>⚔️ Enchantnout meč</strong> a začni ho postupně vylepšovat přes <strong>Tier 1 → Tier 2 → Tier 3</strong>.`;
+  }
+  renderSwordsTab();
+}
+
+function enchantCurrentSwordStep() {
+  if (!isLoggedIn()) {
+    openAuthModal();
+    return;
+  }
+
+  const s = swordsState.currentSword;
+  if (!s || s.tier >= 3) return;
+
+  const rolled = rollEnchantFromCatalog(data.swordEnchantCatalog, s.enchants, false);
+  if (!rolled) {
+    showToast("V katalogu nejsou dostupné žádné sword enchanty.");
+    return;
+  }
+
+  s.tier += 1;
+  s.enchants.push(rolled);
+
+  if (s.tier === 3) {
+    swordsState.savedSwords.unshift({
+      ...cloneData(s),
+      owner: getCurrentActorNick() || "Hráč",
+      createdAt: formatNowCzech()
+    });
+    saveSavedSwords();
+    showToast(`⚔️ Dokončen Tier 3 Mystic Sword!`);
+  } else {
+    showToast(`✨ Meč enchantnut na Tier ${s.tier} (${rolled.name} ${ROMAN_TIERS[rolled.level]})`);
+  }
+
+  renderSwordsTab();
+}
+
+function addCustomSwordEnchant() {
+  if (!isAdmin()) return;
+  const name = document.getElementById("newSwordEnchantName").value.trim();
+  const rarity = document.getElementById("newSwordEnchantRarity").value;
+  if (!name) {
+    showToast("Vyplň název sword enchantu.");
+    return;
+  }
+
+  data.swordEnchantCatalog.push({
+    id: `sw_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    name,
+    rarity: ["common", "rare", "epic"].includes(rarity) ? rarity : "common"
+  });
+
+  document.getElementById("newSwordEnchantName").value = "";
+  saveData();
+  showToast(`Sword enchant "${name}" přidán.`);
+}
+
+function removeCustomSwordEnchant(encId) {
+  if (!isAdmin()) return;
+  data.swordEnchantCatalog = data.swordEnchantCatalog.filter(e => e.id !== encId);
+  saveData();
+  showToast("Sword enchant odebrán.");
+}
+
+function resetSwordEnchantsToDefault() {
+  if (!isAdmin()) return;
+  if (!confirm("Obnovit výchozí seznam sword enchantů?")) return;
+  data.swordEnchantCatalog = cloneData(DEFAULT_SWORD_ENCHANT_CATALOG);
+  saveData();
+  showToast("Výchozí sword enchanty obnoveny.");
+}
+
+function clearSavedSwords() {
+  if (!isLoggedIn()) return;
+  swordsState.savedSwords = [];
+  saveSavedSwords();
+  showToast("Sbírka Tier 3 mečů vymazána.");
+  renderSwordsTab();
+}
+
+function renderSwordsTab() {
+  applySwordsAuthGuard();
+  if (!isLoggedIn()) return;
+
+  const statsRow = document.getElementById("swordsStatsRow");
+  if (statsRow) {
+    statsRow.innerHTML = `
+      <span>Vytvořené meče: <strong>${swordsState.swordsStartedCount}</strong></span>
+      <span>Dokončené T3: <strong>${swordsState.savedSwords.length}</strong></span>
+    `;
+  }
+
+  const workbench = document.getElementById("activeSwordWorkbench");
+  if (workbench) {
+    const s = swordsState.currentSword;
+    if (!s) {
+      workbench.innerHTML = `
+        <div class="pants-item-card sword-card">
+          <div class="player-name">Žádný aktivní meč na stole</div>
+          <p class="muted-text mt-6">
+            Klikni vlevo na tlačítko <strong>⚔️ Enchantnout meč</strong> a poté postupně přidávej enchanty přes <strong>Tier 1 → Tier 2 → Tier 3</strong>.
+          </p>
+        </div>
+      `;
+    } else {
+      const tierLabel = s.tier === 0 ? "Čistý Mystic Sword (Tier 0)" : `Tier ${s.tier} Mystic Sword`;
+      const enchantsHtml = s.enchants.length
+        ? s.enchants.map(e => `
+            <div class="enchant-line border-${escapeHtml(e.rarity)}">
+              <div class="enchant-line-top">
+                <strong class="enchant-name-${escapeHtml(e.rarity)}">${escapeHtml(e.name)} ${ROMAN_TIERS[e.level] || ""}</strong>
+                <span class="rarity-pill rarity-${escapeHtml(e.rarity)}">${escapeHtml(e.rarity)}</span>
+              </div>
+            </div>
+          `).join("")
+        : `<p class="muted-text mt-10">Zatím žádné enchanty. Klikni pro enchantnutí na <strong>Tier 1</strong>.</p>`;
+
+      const actionBtnHtml = s.tier < 3
+        ? `<button type="button" class="btn btn-green" id="enchantSwordStepBtn">✨ Enchantnout na Tier ${s.tier + 1}</button>`
+        : `<div class="completion-box mt-12 mb-0"><span>Stav zbraně</span><strong>✅ HOTOVO • TIER 3 SWORD</strong></div>`;
+
+      workbench.innerHTML = `
+        <div class="pants-item-card sword-card">
+          <div class="card-header-row">
+            <div>
+              <strong class="player-name">⚔️ ${escapeHtml(s.name)}</strong>
+              <span class="player-sub">• ${escapeHtml(tierLabel)}</span>
+            </div>
+            <span class="obj-badge">Tier ${s.tier}/3</span>
+          </div>
+          ${enchantsHtml}
+          <div class="actions-row">${actionBtnHtml}</div>
+        </div>
+      `;
+      document.getElementById("enchantSwordStepBtn")?.addEventListener("click", enchantCurrentSwordStep);
+    }
+  }
+
+  const catalogGrid = document.getElementById("swordEnchantCatalogGrid");
+  if (catalogGrid) {
+    catalogGrid.innerHTML = buildEnchantCatalogHtml(data.swordEnchantCatalog, "data-del-sword-enchant");
+  }
+
+  const savedGrid = document.getElementById("savedSwordsGrid");
+  if (savedGrid) {
+    if (swordsState.savedSwords.length === 0) {
+      savedGrid.innerHTML = `<p class="muted-text">Zatím nemáš dokončené žádné Tier 3 meče.</p>`;
+    } else {
+      savedGrid.innerHTML = swordsState.savedSwords.map(item => `
+        <div class="pants-item-card sword-card">
+          <div class="card-header-row mb-6">
+            <div>
+              <strong>⚔️ Mystic Sword • Tier 3</strong>
+            </div>
+            <span class="obj-badge reward">${escapeHtml(item.owner || "Hráč")}</span>
+          </div>
+          <div class="player-sub mt-0 mb-8">${escapeHtml(item.createdAt || "")}</div>
+          ${(item.enchants || []).map(e => `
+            <div class="enchant-line border-${escapeHtml(e.rarity)}">
+              <div class="enchant-line-top">
+                <strong class="enchant-name-${escapeHtml(e.rarity)}">${escapeHtml(e.name)} ${ROMAN_TIERS[e.level] || ""}</strong>
+                <span class="rarity-pill rarity-${escapeHtml(e.rarity)}">${escapeHtml(e.rarity)}</span>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      `).join("");
     }
   }
 }
@@ -1945,7 +2234,7 @@ function applyObjectiveFormToData(objId, triggerSave = false) {
     showToast(`Uloženo a propsáno na přehled: ${obj.title}`);
   } else {
     data.lastUpdated = formatNowCzech();
-    localStorage.setItem("lap_pit_data_v17", JSON.stringify(data));
+    localStorage.setItem("lap_pit_data_v18", JSON.stringify(data));
     renderObjectives();
     renderPodium();
     renderRoster();
@@ -2506,6 +2795,12 @@ function bindStaticEvents() {
       return;
     }
 
+    const delSwordEnchantBtn = e.target.closest("[data-del-sword-enchant]");
+    if (delSwordEnchantBtn) {
+      removeCustomSwordEnchant(delSwordEnchantBtn.dataset.delSwordEnchant);
+      return;
+    }
+
     const saveObjBtn = e.target.closest("[data-save-obj]");
     if (saveObjBtn) {
       applyObjectiveFormToData(saveObjBtn.dataset.saveObj, true);
@@ -2582,6 +2877,12 @@ function bindStaticEvents() {
   document.getElementById("resetEnchantsBtn")?.addEventListener("click", resetEnchantsToDefault);
   document.getElementById("clearSavedPantsBtn")?.addEventListener("click", clearSavedPants);
 
+  document.getElementById("startEnchantSwordBtn")?.addEventListener("click", startEnchantSword);
+  document.getElementById("resetCurrentSwordBtn")?.addEventListener("click", resetCurrentSword);
+  document.getElementById("addCustomSwordEnchantBtn")?.addEventListener("click", addCustomSwordEnchant);
+  document.getElementById("resetSwordEnchantsBtn")?.addEventListener("click", resetSwordEnchantsToDefault);
+  document.getElementById("clearSavedSwordsBtn")?.addEventListener("click", clearSavedSwords);
+
   document.getElementById("addAnnouncementBtn")?.addEventListener("click", addAnnouncement);
   document.getElementById("addPollBtn")?.addEventListener("click", addPoll);
 
@@ -2604,6 +2905,7 @@ function renderAll(options = {}) {
   renderPodium();
   renderRoster();
   renderPantsTab();
+  renderSwordsTab();
   renderAnnouncements();
   renderPolls();
   if (!options.skipAdmin) renderAdmin();
