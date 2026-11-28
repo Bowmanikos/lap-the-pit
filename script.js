@@ -557,7 +557,7 @@ function isLoggedIn() {
 }
 
 function getCurrentActorNick() {
-  return authState.currentUser?.mcNick || authState.currentUser?.username || "";
+  return authState.currentUser?.mcNick || authState.currentUser?.username || "Hráč";
 }
 
 function setHidden(el, shouldHide) {
@@ -614,20 +614,8 @@ function applyPantsAuthGuard() {
 }
 
 function applySwordsAuthGuard() {
-  const gate = document.getElementById("swordsAuthGate");
-  const content = document.getElementById("swordsAuthenticatedContent");
   const adminSwordCard = document.getElementById("adminSwordEnchantCreatorCard");
-
   setHidden(adminSwordCard, !isAdmin());
-  if (!gate || !content) return;
-
-  if (isLoggedIn()) {
-    setHidden(gate, true);
-    setHidden(content, false);
-  } else {
-    setHidden(gate, false);
-    setHidden(content, true);
-  }
 }
 
 function applyPermissions() {
@@ -704,31 +692,23 @@ function submitAuthForm(e) {
   const effectiveRole = found.username.toLowerCase() === "bowman" ? "admin" : "user";
   authState.currentUser = { username: found.username, mcNick: found.mcNick, role: effectiveRole };
   saveSession();
-  renderPantsTab();
-  renderSwordsTab();
+
   feedback.textContent = `Přihlášeno jako ${found.mcNick} (${effectiveRole}).`;
   feedback.className = "auth-feedback ok";
-  renderPodium();
-  renderRoster();
-  renderAnnouncements();
-  renderPolls();
+
+  renderAll();
   if (activePlayerModalId !== null) openPlayerDetailModal(activePlayerModalId, true);
 
   setTimeout(() => {
     closeAuthModal();
     showToast(`Přihlášen jako ${found.mcNick}`);
-  }, 350);
+  }, 250);
 }
 
 function logoutUser() {
   authState.currentUser = null;
   saveSession();
-  renderPantsTab();
-  renderSwordsTab();
-  renderPodium();
-  renderRoster();
-  renderAnnouncements();
-  renderPolls();
+  renderAll();
   if (activePlayerModalId !== null) openPlayerDetailModal(activePlayerModalId, true);
   showToast("Byl jsi odhlášen.");
 }
@@ -740,15 +720,14 @@ function switchTab(tab) {
     return;
   }
 
-  if ((tab === "pants" || tab === "swords") && !isLoggedIn()) {
+  if (tab === "pants" && !isLoggedIn()) {
     applyPantsAuthGuard();
-    applySwordsAuthGuard();
     document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
     document.querySelectorAll(".nav-tab").forEach(el => el.classList.remove("active"));
-    document.getElementById(`tab-${tab}`)?.classList.add("active");
-    document.querySelector(`.nav-tab[data-tab="${tab}"]`)?.classList.add("active");
+    document.getElementById("tab-pants")?.classList.add("active");
+    document.querySelector('.nav-tab[data-tab="pants"]')?.classList.add("active");
     openAuthModal();
-    showToast(`Pro vstup do sekce ${tab === "swords" ? "Swords" : "Pants"} se musíš přihlásit.`);
+    showToast("Pro vstup do sekce Pants se musíš přihlásit.");
     return;
   }
 
@@ -918,7 +897,7 @@ function enchantCurrentPantsStep() {
   if (p.tier === 3) {
     pantsState.savedPants.unshift({
       ...cloneData(p),
-      owner: getCurrentActorNick() || "Hráč",
+      owner: getCurrentActorNick(),
       createdAt: formatNowCzech()
     });
     saveSavedPants();
@@ -965,8 +944,18 @@ function resetEnchantsToDefault() {
   showToast("Výchozí enchanty obnoveny.");
 }
 
+function deleteSavedPantsItem(pantsId) {
+  pantsState.savedPants = pantsState.savedPants.filter(item => item.id !== pantsId);
+  saveSavedPants();
+  showToast("Kalhoty ze sbírky smazány.");
+  renderPantsTab();
+}
+
 function clearSavedPants() {
-  if (!isLoggedIn()) return;
+  if (pantsState.savedPants.length === 0) {
+    showToast("Sbírka kalhot už je prázdná.");
+    return;
+  }
   pantsState.savedPants = [];
   saveSavedPants();
   showToast("Sbírka Tier 3 pantů vymazána.");
@@ -1053,7 +1042,10 @@ function renderPantsTab() {
                 <span class="pants-swatch ${col.swatchClass}"></span>
                 <strong>${escapeHtml(col.name)} • Tier 3</strong>
               </div>
-              <span class="obj-badge reward">${escapeHtml(item.owner || "Hráč")}</span>
+              <div class="admin-inputs mt-0">
+                <span class="obj-badge reward">${escapeHtml(item.owner || "Hráč")}</span>
+                <button type="button" class="btn btn-red btn-sm" data-del-saved-pants="${escapeHtml(item.id)}" title="Smazat kalhoty">✕</button>
+              </div>
             </div>
             <div class="player-sub mt-0 mb-8">${escapeHtml(item.createdAt || "")}</div>
             ${(item.enchants || []).map(e => `
@@ -1073,11 +1065,6 @@ function renderPantsTab() {
 
 /* SWORDS */
 function startEnchantSword() {
-  if (!isLoggedIn()) {
-    openAuthModal();
-    return;
-  }
-
   swordsState.swordsStartedCount += 1;
   swordsState.currentSword = {
     id: `sword_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -1097,10 +1084,6 @@ function startEnchantSword() {
 }
 
 function resetCurrentSword() {
-  if (!isLoggedIn()) {
-    openAuthModal();
-    return;
-  }
   swordsState.currentSword = null;
   const statusEl = document.getElementById("swordStatusBox");
   if (statusEl) {
@@ -1111,11 +1094,6 @@ function resetCurrentSword() {
 }
 
 function enchantCurrentSwordStep() {
-  if (!isLoggedIn()) {
-    openAuthModal();
-    return;
-  }
-
   const s = swordsState.currentSword;
   if (!s || s.tier >= 3) return;
 
@@ -1131,11 +1109,11 @@ function enchantCurrentSwordStep() {
   if (s.tier === 3) {
     swordsState.savedSwords.unshift({
       ...cloneData(s),
-      owner: getCurrentActorNick() || "Hráč",
+      owner: getCurrentActorNick(),
       createdAt: formatNowCzech()
     });
     saveSavedSwords();
-    showToast(`⚔️ Dokončen Tier 3 Mystic Sword!`);
+    showToast("⚔️ Dokončen Tier 3 Mystic Sword!");
   } else {
     showToast(`✨ Meč enchantnut na Tier ${s.tier} (${rolled.name} ${ROMAN_TIERS[rolled.level]})`);
   }
@@ -1178,8 +1156,18 @@ function resetSwordEnchantsToDefault() {
   showToast("Výchozí sword enchanty obnoveny.");
 }
 
+function deleteSavedSwordItem(swordId) {
+  swordsState.savedSwords = swordsState.savedSwords.filter(item => item.id !== swordId);
+  saveSavedSwords();
+  showToast("Meč ze sbírky smazán.");
+  renderSwordsTab();
+}
+
 function clearSavedSwords() {
-  if (!isLoggedIn()) return;
+  if (swordsState.savedSwords.length === 0) {
+    showToast("Sbírka mečů už je prázdná.");
+    return;
+  }
   swordsState.savedSwords = [];
   saveSavedSwords();
   showToast("Sbírka Tier 3 mečů vymazána.");
@@ -1188,7 +1176,6 @@ function clearSavedSwords() {
 
 function renderSwordsTab() {
   applySwordsAuthGuard();
-  if (!isLoggedIn()) return;
 
   const statsRow = document.getElementById("swordsStatsRow");
   if (statsRow) {
@@ -1260,7 +1247,10 @@ function renderSwordsTab() {
             <div>
               <strong>⚔️ Mystic Sword • Tier 3</strong>
             </div>
-            <span class="obj-badge reward">${escapeHtml(item.owner || "Hráč")}</span>
+            <div class="admin-inputs mt-0">
+              <span class="obj-badge reward">${escapeHtml(item.owner || "Hráč")}</span>
+              <button type="button" class="btn btn-red btn-sm" data-del-saved-sword="${escapeHtml(item.id)}" title="Smazat meč">✕</button>
+            </div>
           </div>
           <div class="player-sub mt-0 mb-8">${escapeHtml(item.createdAt || "")}</div>
           ${(item.enchants || []).map(e => `
@@ -1578,7 +1568,7 @@ function addPlayerCommentFromInput(playerId, inputId) {
   player.comments = player.comments || [];
   player.comments.unshift({
     id: `cmt_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-    author: getCurrentActorNick() || "Hráč",
+    author: getCurrentActorNick(),
     text,
     createdAt: formatNowCzech()
   });
@@ -1855,7 +1845,7 @@ function addAnnouncement() {
     date,
     time,
     desc,
-    author: getCurrentActorNick() || "Člen LAP",
+    author: getCurrentActorNick(),
     pinned,
     createdAt: formatNowCzech(),
     signups: []
@@ -1897,7 +1887,7 @@ function joinAnnouncement(annId, inputPrefix = "roleInput") {
   if (!ann) return;
 
   ann.signups = ann.signups || [];
-  const nick = getCurrentActorNick() || "Hráč";
+  const nick = getCurrentActorNick();
   const entry = { nick, roleNote };
   const existingIdx = ann.signups.findIndex(s => s.nick.toLowerCase() === nick.toLowerCase());
   if (existingIdx >= 0) ann.signups[existingIdx] = entry;
@@ -2011,7 +2001,7 @@ function addPoll() {
     id: `poll_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     question,
     desc,
-    author: getCurrentActorNick() || "Člen LAP",
+    author: getCurrentActorNick(),
     pinned,
     createdAt: formatNowCzech(),
     votes: {}
@@ -2036,7 +2026,7 @@ function votePoll(pollId, choice) {
   if (!poll) return;
 
   poll.votes = poll.votes || {};
-  poll.votes[getCurrentActorNick() || "Hráč"] = choice;
+  poll.votes[getCurrentActorNick()] = choice;
   saveData();
   showToast(choice === "yes" ? "Hlasoval jsi: Ano 👍" : "Hlasoval jsi: Ne 👎");
 }
@@ -2786,6 +2776,18 @@ function bindStaticEvents() {
     if (votePollBtn) {
       const [pollId, choice] = votePollBtn.dataset.votePoll.split("::");
       votePoll(pollId, choice);
+      return;
+    }
+
+    const delSavedPantsBtn = e.target.closest("[data-del-saved-pants]");
+    if (delSavedPantsBtn) {
+      deleteSavedPantsItem(delSavedPantsBtn.dataset.delSavedPants);
+      return;
+    }
+
+    const delSavedSwordBtn = e.target.closest("[data-del-saved-sword]");
+    if (delSavedSwordBtn) {
+      deleteSavedSwordItem(delSavedSwordBtn.dataset.delSavedSword);
       return;
     }
 
