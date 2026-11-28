@@ -3,331 +3,267 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LAP The Pit Guild • Vánoční Přehled</title>
+  <title>LAP The Pit • Guildovní Tracker</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="snowfallLayer" class="snowfall-layer" aria-hidden="true"></div>
-  <div class="holiday-lights" aria-hidden="true">
-    <span></span><span></span><span></span><span></span><span></span><span></span>
-    <span></span><span></span><span></span><span></span><span></span><span></span>
-  </div>
+  <div class="snowfall-layer" id="snowfallLayer" aria-hidden="true"></div>
 
-  <div class="wrap">
-    <header class="card header-card">
-      <div class="header-top">
-        <div class="brand">
-          <div class="brand-badge">🎄</div>
-          <div>
-            <div class="holiday-pill">❄️ ZIMNÍ / VÁNOČNÍ EDICE • LAP THE PIT</div>
-            <h1>LAP THE PIT GUILD</h1>
-            <p class="subtitle" id="weekSubtitle">Týden #1 • LAP The Pit • mc.survival-games.cz</p>
-          </div>
-        </div>
-
-        <div class="auth-panel">
-          <div id="authUserPill" class="user-pill hidden">
-            <img id="authUserAvatar" src="https://mc-heads.net/avatar/MHF_Steve/28" alt="Avatar" />
-            <span id="authUserName">Hráč</span>
-            <span id="authUserRole" class="role-tag">USER</span>
-          </div>
-          <button type="button" id="openAuthBtn" class="btn btn-green">🔐 Přihlásit se</button>
-          <button type="button" id="logoutBtn" class="btn btn-dark hidden">Odhlásit</button>
-        </div>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand-block">
+        <div class="brand-title">🎄 LAP THE PIT <span class="badge-xmas">VÁNOČNÍ EDICE</span></div>
+        <div class="brand-sub">Guildovní tracker • Společné objectives, eventy, ankety a enchanty</div>
       </div>
 
-      <nav class="nav-tabs" role="tablist" aria-label="Hlavní navigace">
-        <button type="button" class="nav-tab active" data-tab="overview">🎄 Přehled</button>
-        <button type="button" class="nav-tab" data-tab="players">👥 Seznam hráčů</button>
-        <button type="button" class="nav-tab" data-tab="objectives">🎯 Objectives</button>
-        <button type="button" class="nav-tab" data-tab="pants">👖 Pants</button>
-        <button type="button" class="nav-tab" data-tab="swords">⚔️ Swords</button>
-        <button type="button" class="nav-tab" data-tab="announcements">📢 Oznámení</button>
-        <button type="button" class="nav-tab" data-tab="polls">🗳️ Ankety</button>
-        <button type="button" class="nav-tab" data-tab="history">📜 Historie týdnů</button>
-        <button type="button" class="nav-tab" data-tab="admin" data-admin-only="true">🛠️ Správa (Admin)</button>
+      <nav class="nav-tabs" aria-label="Hlavní navigace">
+        <button type="button" class="nav-tab active" data-tab="overview">Přehled</button>
+        <button type="button" class="nav-tab" data-tab="objectives">Objectives</button>
+        <button type="button" class="nav-tab" data-tab="pants">Pants</button>
+        <button type="button" class="nav-tab" data-tab="swords">Swords</button>
+        <button type="button" class="nav-tab" data-tab="announcements">Oznámení</button>
+        <button type="button" class="nav-tab" data-tab="polls">Ankety</button>
+        <button type="button" class="nav-tab" data-tab="history">Historie</button>
+        <button type="button" class="nav-tab hidden" data-tab="admin" data-admin-only="true">Správa</button>
       </nav>
-    </header>
 
-    <!-- ZÁLOŽKA 1: PŘEHLED -->
-    <section id="tab-overview" class="tab-content active">
-      <div class="section-head">
-        <div>
-          <h2>🎁 Společné vánoční objectives guildy</h2>
-          <p class="muted-text mt-2">Aktuální stav plnění, tiery T0–T10 a procentuální ryska splnění</p>
+      <div class="auth-controls">
+        <div class="user-pill hidden" id="authUserPill">
+          <img id="authUserAvatar" src="" alt="Avatar" width="28" height="28" />
+          <span id="authUserName">Hráč</span>
+          <span class="role-tag" id="authUserRole">USER</span>
         </div>
-        <span class="last-updated-badge" id="overviewLastUpdated">🕒 Poslední aktualizace: —</span>
+        <button type="button" class="btn btn-green btn-sm" id="openAuthBtn">🔐 Přihlásit</button>
+        <button type="button" class="btn btn-dark btn-sm hidden" id="logoutBtn">Odhlásit</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- PŘEHLED -->
+    <section class="tab-content active" id="tab-overview">
+      <div class="section-header-row">
+        <div>
+          <h1>Přehled guildy</h1>
+          <p class="muted-text" id="weekSubtitle">Týden #1 • Vánoční LAP The Pit</p>
+        </div>
+        <div class="timestamp-pill" id="overviewLastUpdated">🕒 Poslední aktualizace: —</div>
       </div>
 
-      <div id="totalChestBanner" class="total-chest-banner"></div>
-      <div id="objectivesStrip" class="objectives-strip"></div>
+      <div class="total-chest-banner" id="totalChestBanner"></div>
 
-      <section id="pinnedAnnouncementsSection" class="pinned-section hidden">
-        <div class="section-head">
-          <div>
-            <h2>📌 Připnutá oznámení</h2>
-            <p class="muted-text mt-2">Důležité akce a plány připnuté na hlavní přehled</p>
-          </div>
-          <button type="button" class="btn btn-dark btn-sm" data-goto-tab="announcements">Všechna oznámení →</button>
-        </div>
-        <div id="pinnedAnnouncementsList" class="stack-list"></div>
-      </section>
+      <div class="objectives-strip" id="objectivesStrip"></div>
 
-      <section id="pinnedPollsSection" class="pinned-section hidden">
-        <div class="section-head">
-          <div>
-            <h2>📌 Připnuté ankety</h2>
-            <p class="muted-text mt-2">Hlasování připnuté na hlavní stránce</p>
-          </div>
-          <button type="button" class="btn btn-dark btn-sm" data-goto-tab="polls">Všechny ankety →</button>
-        </div>
-        <div id="pinnedPollsList" class="stack-list"></div>
-      </section>
+      <div class="hidden" id="pinnedAnnouncementsSection">
+        <h2 class="section-heading">📌 Připnutá oznámení</h2>
+        <div class="cards-stack" id="pinnedAnnouncementsList"></div>
+      </div>
 
-      <section class="podium-section">
-        <div class="section-head">
-          <h2>🏆 Top 3 podle % podílu</h2>
-          <div class="section-head-actions">
-            <span class="muted-text">Kliknutím otevřeš detail</span>
-            <button type="button" class="btn btn-dark btn-sm" data-goto-tab="players">👥 Celý seznam hráčů →</button>
-          </div>
-        </div>
-        <div id="podiumGrid" class="podium-grid"></div>
-      </section>
-    </section>
+      <div class="hidden" id="pinnedPollsSection">
+        <h2 class="section-heading">📌 Připnuté ankety</h2>
+        <div class="cards-stack" id="pinnedPollsList"></div>
+      </div>
 
-    <!-- ZÁLOŽKA 2: SEZNAM HRÁČŮ -->
-    <section id="tab-players" class="tab-content">
-      <div class="section-head">
+      <h2 class="section-heading">🏆 Top 3 přispěvatelé</h2>
+      <div class="podium-grid" id="podiumGrid"></div>
+
+      <div class="roster-toolbar">
         <div>
-          <h2>👥 Seznam hráčů guildy</h2>
-          <p class="muted-text mt-2" id="playersCountSubtitle">Přehled všech členů, příspěvků, statistik a komentářů</p>
+          <h2 class="section-heading mb-0">👥 Soupiska členů</h2>
+          <p class="muted-text" id="playersCountSubtitle">Členové guildy</p>
         </div>
-        <div class="controls">
-          <input type="text" id="searchInput" placeholder="🔍 Hledat podle nicku..." />
-          <select id="rankFilterSelect">
+        <div class="filter-controls">
+          <input type="search" id="searchInput" placeholder="Hledat nick..." aria-label="Hledat hráče" />
+          <select id="rankFilterSelect" aria-label="Filtrovat podle ranku">
             <option value="all">Všechny ranky</option>
             <option value="Leader">Leader</option>
             <option value="Co-leader">Co-leader</option>
             <option value="Elder">Elder</option>
             <option value="Member">Member</option>
           </select>
-          <select id="sortSelect"></select>
+          <select id="sortSelect" aria-label="Řazení hráčů"></select>
         </div>
       </div>
-      <div id="rosterGrid" class="roster-grid"></div>
+
+      <div class="roster-grid" id="rosterGrid"></div>
     </section>
 
-    <!-- ZÁLOŽKA 3: OBJECTIVES -->
-    <section id="tab-objectives" class="tab-content">
-      <div class="section-head">
+    <!-- OBJECTIVES -->
+    <section class="tab-content" id="tab-objectives">
+      <div class="section-header-row">
         <div>
-          <h2>🎯 Detail společných objectives</h2>
-          <p class="muted-text mt-2" id="objTabSubtitle">Týden #1 • LAP The Pit</p>
+          <h1>Společné Objectives</h1>
+          <p class="muted-text" id="objTabSubtitle">Postup guildy a cíle jednotlivých tierů</p>
         </div>
-        <span class="last-updated-badge" id="objLastUpdated">🕒 Poslední aktualizace: —</span>
+        <div class="timestamp-pill" id="objLastUpdated">🕒 Poslední aktualizace: —</div>
       </div>
-      <div id="objTotalChestBanner" class="total-chest-banner"></div>
-      <div id="objectivesDetailGrid" class="objectives-detail-grid"></div>
+
+      <div class="total-chest-banner" id="objTotalChestBanner"></div>
+      <div class="cards-grid" id="objectivesDetailGrid"></div>
     </section>
 
-    <!-- ZÁLOŽKA 4: PANTS -->
-    <section id="tab-pants" class="tab-content">
-      <div class="section-head">
+    <!-- PANTS -->
+    <section class="tab-content" id="tab-pants">
+      <div class="section-header-row">
         <div>
-          <h2>👖 Pit Pants &amp; Enchant Workbench</h2>
-          <p class="muted-text mt-2">Otevírání beden T8–T10 a enchantování padlých kalhot až na Tier 3</p>
+          <h1>👖 Mystic Pants &amp; Enchantování</h1>
+          <p class="muted-text">Otevírej bedny, získej panty a enchantuj je až na Tier 3</p>
         </div>
-        <div class="pants-stats-row" id="pantsStatsRow"></div>
+        <div class="stats-inline-row" id="pantsStatsRow"></div>
       </div>
 
-      <div id="pantsAuthGate" class="card">
-        <h3>🔐 Přihlášení vyžadováno</h3>
-        <p class="muted-text">Pro otevírání beden, enchantování a správu své sbírky kalhot se přihlas svým účtem.</p>
+      <div class="card hidden" id="pantsAuthGate">
+        <h3>🔐 Vyžadováno přihlášení</h3>
+        <p class="muted-text">Sekce Pants je dostupná pouze pro přihlášené členy guildy.</p>
         <div class="actions-row">
-          <button type="button" class="btn btn-green" data-open-auth="true">Přihlásit se</button>
+          <button type="button" class="btn btn-green" data-open-auth="true">🔐 Přihlásit se</button>
         </div>
       </div>
 
-      <div id="pantsAuthenticatedContent" class="hidden">
+      <div id="pantsAuthenticatedContent">
         <div class="two-col-grid">
           <div class="card">
-            <h3>🎁 Otevřít bednu na Pants</h3>
-            <div class="field">
-              <label for="pantsChestTier">Tier bedny</label>
-              <select id="pantsChestTier">
-                <option value="8">Tier 8 Bedna (6 % šance)</option>
-                <option value="9">Tier 9 Bedna (8 % šance)</option>
-                <option value="10" selected>Tier 10 Bedna (10 % šance)</option>
+            <h3>🎁 Otevření bedny</h3>
+            <p class="muted-text">Vyber tier bedny a zkus získat čisté Mystic Pants.</p>
+            <div class="inline-row mt-12">
+              <select id="pantsChestTier" aria-label="Tier bedny pro pants">
+                <option value="8">Tier 8 Bedna (6 %)</option>
+                <option value="9">Tier 9 Bedna (8 %)</option>
+                <option value="10" selected>Tier 10 Bedna (10 %)</option>
               </select>
-            </div>
-            <div id="pantsCrateStatus" class="pants-status-box">
-              Vyber <strong>Tier 8</strong>, <strong>Tier 9</strong> nebo <strong>Tier 10</strong> bednu a klikni na <strong>🎁 Vyzvednout bednu</strong>.
-            </div>
-            <div class="actions-row">
               <button type="button" class="btn btn-green" id="openPantsCrateBtn">🎁 Vyzvednout bednu</button>
-              <button type="button" class="btn btn-dark" id="resetCurrentPantsBtn">Vymazat rozpracované</button>
+              <button type="button" class="btn btn-dark" id="resetCurrentPantsBtn">↺ Reset stolu</button>
+            </div>
+            <div class="pants-status-box mt-14" id="pantsCrateStatus">
+              Vyber <strong>Tier 8</strong>, <strong>Tier 9</strong> nebo <strong>Tier 10</strong> bednu a klikni na <strong>🎁 Vyzvednout bednu</strong>.
             </div>
           </div>
 
           <div class="card">
-            <h3>✨ Enchantovací stůl</h3>
+            <h3>✨ Aktivní stůl na kalhoty</h3>
             <div id="activePantsWorkbench"></div>
           </div>
         </div>
 
-        <div id="adminEnchantCreatorCard" class="card mt-16 hidden">
-          <h3>🛠️ Správa katalogu enchantů (Admin)</h3>
-          <div class="form-grid">
-            <div class="field">
-              <label for="newEnchantName">Název enchantu</label>
-              <input type="text" id="newEnchantName" placeholder="Např. Solomon" />
-            </div>
-            <div class="field">
-              <label for="newEnchantRarity">Vzácnost</label>
-              <select id="newEnchantRarity">
-                <option value="common">Common (Šedá)</option>
-                <option value="rare">Rare (Modrá)</option>
-                <option value="epic">Epic (Fialová)</option>
-              </select>
-            </div>
-          </div>
-          <div class="actions-row">
+        <div class="card mt-16 hidden" id="adminEnchantCreatorCard">
+          <h3>🛠️ Správa katalogu Pants enchantů (Admin)</h3>
+          <div class="inline-row mt-10">
+            <input type="text" id="newEnchantName" placeholder="Název enchantu..." />
+            <select id="newEnchantRarity">
+              <option value="common">Common (60 %)</option>
+              <option value="rare">Rare (30 %)</option>
+              <option value="epic">Epic (10 %)</option>
+            </select>
             <button type="button" class="btn btn-green" id="addCustomEnchantBtn">+ Přidat enchant</button>
-            <button type="button" class="btn btn-dark" id="resetEnchantsBtn">Obnovit výchozí</button>
+            <button type="button" class="btn btn-dark" id="resetEnchantsBtn">↺ Obnovit výchozí</button>
           </div>
         </div>
 
-        <div class="card mt-16">
-          <h3>📚 Katalog enchantů (Pants)</h3>
-          <div id="enchantCatalogGrid" class="pants-catalog-grid"></div>
-        </div>
+        <h2 class="section-heading">📚 Katalog Pants enchantů</h2>
+        <div class="cards-grid" id="enchantCatalogGrid"></div>
 
-        <div class="card mt-16">
-          <div class="card-header-row mb-10">
-            <h3>🏅 Moje dokončené Tier 3 Pants</h3>
-            <button type="button" class="btn btn-red btn-sm" id="clearSavedPantsBtn">Vymazat mou sbírku</button>
-          </div>
-          <div id="savedPantsGrid" class="pants-saved-grid"></div>
+        <div class="section-header-row mt-24">
+          <h2 class="section-heading mb-0">🏅 Moje dokončené Tier 3 kalhoty</h2>
+          <button type="button" class="btn btn-red btn-sm" id="clearSavedPantsBtn">🗑️ Vymazat moje T3</button>
         </div>
+        <div class="cards-grid mt-12" id="savedPantsGrid"></div>
       </div>
     </section>
 
-    <!-- ZÁLOŽKA 5: SWORDS -->
-    <section id="tab-swords" class="tab-content">
-      <div class="section-head">
+    <!-- SWORDS -->
+    <section class="tab-content" id="tab-swords">
+      <div class="section-header-row">
         <div>
-          <h2>⚔️ Pit Swords &amp; Enchant Workbench</h2>
-          <p class="muted-text mt-2">Enchantování Mystic mečů na Tier 1, Tier 2 a Tier 3 (Common 60 % • Rare 30 % • Epic 10 %)</p>
+          <h1>⚔️ Mystic Swords &amp; Enchantování</h1>
+          <p class="muted-text">Vylepšuj Mystic Sword přes Tier 1 → Tier 2 → Tier 3</p>
         </div>
-        <div class="pants-stats-row" id="swordsStatsRow"></div>
+        <div class="stats-inline-row" id="swordsStatsRow"></div>
       </div>
 
-      <div id="swordsAuthGate" class="card">
-        <h3>🔐 Přihlášení vyžadováno</h3>
-        <p class="muted-text">Pro enchantování mečů a zobrazení své sbírky se přihlas svým účtem.</p>
+      <div class="card hidden" id="swordsAuthGate">
+        <h3>🔐 Vyžadováno přihlášení</h3>
+        <p class="muted-text">Sekce Swords je dostupná pouze pro přihlášené členy guildy.</p>
         <div class="actions-row">
-          <button type="button" class="btn btn-green" data-open-auth="true">Přihlásit se</button>
+          <button type="button" class="btn btn-green" data-open-auth="true">🔐 Přihlásit se</button>
         </div>
       </div>
 
-      <div id="swordsAuthenticatedContent" class="hidden">
+      <div id="swordsAuthenticatedContent">
         <div class="two-col-grid">
           <div class="card">
-            <h3>🗡️ Enchantovat meč</h3>
-            <div id="swordStatusBox" class="pants-status-box">
-              Klikni na <strong>⚔️ Enchantnout meč</strong> a začni ho postupně vylepšovat přes <strong>Tier 1 → Tier 2 → Tier 3</strong>.
-            </div>
+            <h3>⚔️ Příprava meče</h3>
+            <p class="muted-text">Začni nový Mystic Sword a postupně na něj přidávej enchanty.</p>
             <div class="actions-row">
               <button type="button" class="btn btn-green" id="startEnchantSwordBtn">⚔️ Enchantnout meč</button>
-              <button type="button" class="btn btn-dark" id="resetCurrentSwordBtn">Vymazat rozpracovaný meč</button>
+              <button type="button" class="btn btn-dark" id="resetCurrentSwordBtn">↺ Reset stolu</button>
+            </div>
+            <div class="pants-status-box mt-14" id="swordStatusBox">
+              Klikni na <strong>⚔️ Enchantnout meč</strong> a začni ho postupně vylepšovat přes <strong>Tier 1 → Tier 2 → Tier 3</strong>.
             </div>
           </div>
 
           <div class="card">
-            <h3>✨ Enchantovací stůl (Meč)</h3>
+            <h3>✨ Aktivní stůl na meč</h3>
             <div id="activeSwordWorkbench"></div>
           </div>
         </div>
 
-        <div id="adminSwordEnchantCreatorCard" class="card mt-16 hidden">
+        <div class="card mt-16 hidden" id="adminSwordEnchantCreatorCard">
           <h3>🛠️ Správa katalogu Sword enchantů (Admin)</h3>
-          <div class="form-grid">
-            <div class="field">
-              <label for="newSwordEnchantName">Název sword enchantu</label>
-              <input type="text" id="newSwordEnchantName" placeholder="Např. Combo: Swift" />
-            </div>
-            <div class="field">
-              <label for="newSwordEnchantRarity">Vzácnost</label>
-              <select id="newSwordEnchantRarity">
-                <option value="common">Common (Šedá • 60 %)</option>
-                <option value="rare">Rare (Modrá • 30 %)</option>
-                <option value="epic">Epic (Fialová • 10 %)</option>
-              </select>
-            </div>
-          </div>
-          <div class="actions-row">
+          <div class="inline-row mt-10">
+            <input type="text" id="newSwordEnchantName" placeholder="Název sword enchantu..." />
+            <select id="newSwordEnchantRarity">
+              <option value="common">Common (60 %)</option>
+              <option value="rare">Rare (30 %)</option>
+              <option value="epic">Epic (10 %)</option>
+            </select>
             <button type="button" class="btn btn-green" id="addCustomSwordEnchantBtn">+ Přidat sword enchant</button>
-            <button type="button" class="btn btn-dark" id="resetSwordEnchantsBtn">Obnovit výchozí</button>
+            <button type="button" class="btn btn-dark" id="resetSwordEnchantsBtn">↺ Obnovit výchozí</button>
           </div>
         </div>
 
-        <div class="card mt-16">
-          <h3>📚 Katalog Sword enchantů</h3>
-          <div id="swordEnchantCatalogGrid" class="pants-catalog-grid"></div>
-        </div>
+        <h2 class="section-heading">📚 Katalog Sword enchantů</h2>
+        <div class="cards-grid" id="swordEnchantCatalogGrid"></div>
 
-        <div class="card mt-16">
-          <div class="card-header-row mb-10">
-            <h3>🏅 Moje dokončené Tier 3 Swords</h3>
-            <button type="button" class="btn btn-red btn-sm" id="clearSavedSwordsBtn">Vymazat mou sbírku</button>
-          </div>
-          <div id="savedSwordsGrid" class="pants-saved-grid"></div>
+        <div class="section-header-row mt-24">
+          <h2 class="section-heading mb-0">🏅 Moje dokončené Tier 3 meče</h2>
+          <button type="button" class="btn btn-red btn-sm" id="clearSavedSwordsBtn">🗑️ Vymazat moje T3</button>
         </div>
+        <div class="cards-grid mt-12" id="savedSwordsGrid"></div>
       </div>
     </section>
 
-    <!-- ZÁLOŽKA 6: OZNÁMENÍ -->
-    <section id="tab-announcements" class="tab-content">
-      <div class="section-head">
+    <!-- OZNÁMENÍ -->
+    <section class="tab-content" id="tab-announcements">
+      <div class="section-header-row">
         <div>
-          <h2>📢 Guildovní oznámení &amp; akce</h2>
-          <p class="muted-text mt-2">Plánování společných akcí a zápis rolí členů</p>
+          <h1>📢 Oznámení a plánování akcí</h1>
+          <p class="muted-text">Domlouvejte společný grind, eventy a role v týmu</p>
         </div>
       </div>
 
-      <div id="announcementLoginGate" class="card">
-        <h3>🔐 Přihlášení pro tvorbu oznámení</h3>
-        <p class="muted-text">Přihlas se, pokud chceš vytvořit nové oznámení nebo zapsat svůj plán.</p>
+      <div class="card hidden" id="announcementLoginGate">
+        <h3>🔐 Přihlas se pro vytvoření oznámení</h3>
+        <p class="muted-text">Po přihlášení můžeš zveřejňovat nová oznámení i připisovat svůj plán k existujícím akcím.</p>
         <div class="actions-row">
-          <button type="button" class="btn btn-green" data-open-auth="true">Přihlásit se</button>
+          <button type="button" class="btn btn-green" data-open-auth="true">🔐 Přihlásit se</button>
         </div>
       </div>
 
-      <div id="announcementCreatorCard" class="card hidden">
-        <div class="card-header-row mb-10">
+      <div class="card" id="announcementCreatorCard">
+        <div class="card-header-row mb-8">
           <h3>➕ Nové oznámení</h3>
           <span class="player-sub" id="annCreatorAuthorHint"></span>
         </div>
-        <div class="form-grid">
-          <div class="field">
-            <label for="annTitle">Co se bude dělat</label>
-            <input type="text" id="annTitle" placeholder="Např. Vánoční streak event v Pit" />
-          </div>
-          <div class="field">
-            <label for="annDate">Datum</label>
-            <input type="date" id="annDate" />
-          </div>
-          <div class="field">
-            <label for="annTime">Čas</label>
-            <input type="time" id="annTime" />
-          </div>
-          <div class="field">
-            <label for="annDesc">Popis / detaily</label>
-            <input type="text" id="annDesc" placeholder="Volitelný popis akce..." />
+        <div class="form-grid-2">
+          <input type="text" id="annTitle" placeholder="Co se bude dělat (např. Společný grind T10 bedny)..." />
+          <div class="inline-row">
+            <input type="date" id="annDate" aria-label="Datum akce" />
+            <input type="time" id="annTime" aria-label="Čas akce" />
           </div>
         </div>
-        <div class="actions-row">
+        <textarea id="annDesc" rows="2" class="mt-10" placeholder="Podrobnosti k akci, lokace, požadavky..."></textarea>
+        <div class="card-footer-row mt-10">
           <label class="checkbox-inline">
             <input type="checkbox" id="annPinOnOverview" />
             <span>📌 Připnout na hlavní přehled</span>
@@ -336,42 +272,34 @@
         </div>
       </div>
 
-      <div id="announcementsList" class="stack-list mt-16"></div>
+      <div class="cards-stack mt-16" id="announcementsList"></div>
     </section>
 
-    <!-- ZÁLOŽKA 7: ANKETY -->
-    <section id="tab-polls" class="tab-content">
-      <div class="section-head">
+    <!-- ANKETY -->
+    <section class="tab-content" id="tab-polls">
+      <div class="section-header-row">
         <div>
-          <h2>🗳️ Guildovní ankety (Ano / Ne)</h2>
-          <p class="muted-text mt-2">Hlasování členů guildy s okamžitým přehledem hlasů</p>
+          <h1>🗳️ Guildovní ankety</h1>
+          <p class="muted-text">Rychlé hlasování Ano / Ne pro rozhodování v guildě</p>
         </div>
       </div>
 
-      <div id="pollLoginGate" class="card">
-        <h3>🔐 Přihlášení pro anketu</h3>
-        <p class="muted-text">Přihlas se pro vytvoření ankety nebo hlasování.</p>
+      <div class="card hidden" id="pollLoginGate">
+        <h3>🔐 Přihlas se pro hlasování a tvorbu anket</h3>
+        <p class="muted-text">Přihlášený účet zajistí, že každý hráč hlasuje pod svým Minecraft nickem.</p>
         <div class="actions-row">
-          <button type="button" class="btn btn-green" data-open-auth="true">Přihlásit se</button>
+          <button type="button" class="btn btn-green" data-open-auth="true">🔐 Přihlásit se</button>
         </div>
       </div>
 
-      <div id="pollCreatorCard" class="card hidden">
-        <div class="card-header-row mb-10">
+      <div class="card" id="pollCreatorCard">
+        <div class="card-header-row mb-8">
           <h3>➕ Nová anketa</h3>
           <span class="player-sub" id="pollCreatorAuthorHint"></span>
         </div>
-        <div class="form-grid">
-          <div class="field">
-            <label for="pollQuestion">Otázka ankety</label>
-            <input type="text" id="pollQuestion" placeholder="Např. Uděláme o víkendu vánoční grind?" />
-          </div>
-          <div class="field">
-            <label for="pollDesc">Doplňující popis</label>
-            <input type="text" id="pollDesc" placeholder="Volitelný upřesňující text..." />
-          </div>
-        </div>
-        <div class="actions-row">
+        <input type="text" id="pollQuestion" placeholder="Otázka ankety (např. Chceme o víkendu grindit T10?)..." />
+        <input type="text" id="pollDesc" class="mt-10" placeholder="Doplňující popis (nepovinné)..." />
+        <div class="card-footer-row mt-10">
           <label class="checkbox-inline">
             <input type="checkbox" id="pollPinOnOverview" />
             <span>📌 Připnout na hlavní stránku</span>
@@ -380,165 +308,131 @@
         </div>
       </div>
 
-      <div id="pollsList" class="stack-list mt-16"></div>
+      <div class="cards-stack mt-16" id="pollsList"></div>
     </section>
 
-    <!-- ZÁLOŽKA 8: HISTORIE -->
-    <section id="tab-history" class="tab-content">
-      <div class="section-head">
+    <!-- HISTORIE -->
+    <section class="tab-content" id="tab-history">
+      <div class="section-header-row">
         <div>
-          <h2>📜 Historie uzavřených týdnů</h2>
-          <p class="muted-text mt-2">Archiv předchozích týdnů, celkových beden a výsledků hráčů</p>
+          <h1>📜 Historie uzavřených týdnů</h1>
+          <p class="muted-text">Archiv předchozích týdnů, beden a příspěvků hráčů</p>
         </div>
       </div>
-      <div id="historyList" class="stack-list"></div>
+      <div class="cards-stack" id="historyList"></div>
     </section>
 
-    <!-- ZÁLOŽKA 9: SPRÁVA (ADMIN) -->
-    <section id="tab-admin" class="tab-content" data-admin-only="true">
-      <div class="section-head">
+    <!-- SPRÁVA (ADMIN) -->
+    <section class="tab-content hidden" id="tab-admin" data-admin-only="true">
+      <div class="section-header-row">
         <div>
-          <h2>🛠️ Správa guildy (Admin)</h2>
-          <p class="muted-text mt-2">Úprava objectives, tierů, hodnot, hráčů, záloh a uzavření týdne</p>
+          <h1>🛠️ Správa guildy (Admin)</h1>
+          <p class="muted-text">Úprava týdne, společných objectives, hráčů a záloh</p>
         </div>
-        <span class="last-updated-badge" id="adminLastUpdated">🕒 Poslední aktualizace: —</span>
+        <div class="timestamp-pill" id="adminLastUpdated">🕒 Poslední aktualizace: —</div>
       </div>
 
-      <div class="two-col-grid">
-        <div class="card">
-          <h3>📅 Název aktuálního týdne</h3>
-          <div class="inline-row">
-            <input type="text" id="adminWeekName" placeholder="Např. Týden #2 • LAP The Pit" />
-            <button type="button" class="btn btn-green" id="saveWeekNameBtn">Uložit název</button>
-          </div>
-          <div id="adminTotalChestBox" class="total-chest-admin-box mt-14"></div>
+      <div class="card">
+        <h3>⚙️ Nastavení týdne &amp; nástroje</h3>
+        <div class="inline-row mt-10">
+          <input type="text" id="adminWeekName" placeholder="Název aktuálního týdne..." />
+          <button type="button" class="btn btn-green" id="saveWeekNameBtn">💾 Uložit název</button>
+          <button type="button" class="btn btn-gold" id="markAllDoneBtn">🎁 Označit vše jako splněno</button>
+          <button type="button" class="btn btn-red" id="closeWeekBtn">📦 Uzavřít týden</button>
         </div>
 
-        <div class="card">
-          <h3>💾 Záloha &amp; sdílení dat</h3>
-          <div class="actions-row">
-            <button type="button" class="btn btn-dark" id="exportBackupBtn">⬇️ Stáhnout JSON</button>
-            <button type="button" class="btn btn-dark" id="importBackupTriggerBtn">⬆️ Nahrát JSON</button>
-            <button type="button" class="btn btn-dark" id="copyShareLinkBtn">🔗 Sdílecí odkaz</button>
-            <button type="button" class="btn btn-dark" id="copyCredsBtn">🔑 Účty &amp; hesla</button>
-            <input type="file" id="backupFileInput" accept="application/json" class="hidden" />
-          </div>
-          <hr class="divider" />
-          <div class="actions-row">
-            <button type="button" class="btn btn-gold" id="markAllDoneBtn">🎁 Označit vše jako splněno</button>
-            <button type="button" class="btn btn-red" id="closeWeekBtn">📦 Uzavřít týden do historie</button>
-          </div>
+        <div class="actions-row">
+          <button type="button" class="btn btn-dark" id="exportBackupBtn">⬇️ Export JSON</button>
+          <button type="button" class="btn btn-dark" id="importBackupTriggerBtn">⬆️ Import JSON</button>
+          <input type="file" id="backupFileInput" accept="application/json" class="hidden" />
+          <button type="button" class="btn btn-dark" id="copyShareLinkBtn">🔗 Kopírovat sdílecí odkaz</button>
+          <button type="button" class="btn btn-dark" id="copyCredsBtn">🔑 Kopírovat účty a hesla</button>
         </div>
+
+        <div class="admin-total-chest mt-14" id="adminTotalChestBox"></div>
       </div>
 
       <div class="card mt-16">
-        <h3>➕ Přidat nový společný objective</h3>
-        <div class="form-grid">
-          <div class="field">
-            <label for="newObjTitle">Název objective</label>
-            <input type="text" id="newObjTitle" placeholder="Např. EVENT MASTER" />
-          </div>
-          <div class="field">
-            <label for="newObjUnit">Jednotka</label>
-            <input type="text" id="newObjUnit" placeholder="Výchozí: bodů" />
-          </div>
-          <div class="field">
-            <label for="newObjInitialTier">Počáteční Tier (T0–T10)</label>
-            <select id="newObjInitialTier">
-              <option value="0">Tier T0</option>
-              <option value="1">Tier T1</option>
-              <option value="2">Tier T2</option>
-              <option value="3">Tier T3</option>
-              <option value="4">Tier T4</option>
-              <option value="5">Tier T5</option>
-              <option value="6">Tier T6</option>
-              <option value="7">Tier T7</option>
-              <option value="8">Tier T8</option>
-              <option value="9">Tier T9</option>
-              <option value="10">Tier T10</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="newObjInitialTarget">Cíl (Z kolika)</label>
-            <input type="number" min="1" id="newObjInitialTarget" placeholder="Např. 500" />
-          </div>
+        <h3>🎯 Společné Objectives</h3>
+        <div class="form-grid-4 mt-10">
+          <input type="text" id="newObjTitle" placeholder="Název objective..." />
+          <input type="text" id="newObjUnit" placeholder="Jednotka (např. bodů, kills)..." />
+          <select id="newObjInitialTier" aria-label="Počáteční tier">
+            <option value="0">Tier T0</option>
+            <option value="1">Tier T1</option>
+            <option value="2">Tier T2</option>
+            <option value="3">Tier T3</option>
+            <option value="4">Tier T4</option>
+            <option value="5">Tier T5</option>
+            <option value="6">Tier T6</option>
+            <option value="7">Tier T7</option>
+            <option value="8">Tier T8</option>
+            <option value="9">Tier T9</option>
+            <option value="10">Tier T10</option>
+          </select>
+          <input type="number" id="newObjInitialTarget" min="1" placeholder="Cíl tieru (nepovinné)" />
         </div>
         <div class="actions-row">
           <button type="button" class="btn btn-green" id="addObjectiveBtn">+ Přidat objective</button>
         </div>
+
+        <div class="cards-stack mt-14" id="adminObjectivesList"></div>
       </div>
 
       <div class="card mt-16">
-        <h3>🎯 Úprava Objectives (Název • Tier • Hotovo • Z kolika)</h3>
-        <div id="adminObjectivesList" class="stack-list"></div>
-      </div>
-
-      <div class="card mt-16">
-        <h3>➕ Přidat člena guildy</h3>
-        <div class="form-grid">
-          <div class="field">
-            <label for="newNick">Minecraft nick</label>
-            <input type="text" id="newNick" placeholder="Např. Steve" />
-          </div>
-          <div class="field">
-            <label for="newRank">Rank</label>
-            <select id="newRank">
-              <option value="Member">Member</option>
-              <option value="Elder">Elder</option>
-              <option value="Co-leader">Co-leader</option>
-              <option value="Leader">Leader</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="newPrestige">Prestige (0–100)</label>
-            <input type="number" id="newPrestige" min="0" max="100" placeholder="20" />
-          </div>
-          <div class="field">
-            <label for="newWeeklyGoal">Týdenní cíl</label>
-            <input type="number" id="newWeeklyGoal" min="0" placeholder="1000" />
-          </div>
-          <div class="field">
-            <label for="newDeaths">Smrti</label>
-            <input type="number" id="newDeaths" min="0" placeholder="0" />
-          </div>
-          <div class="field">
-            <label for="newSigils">Sigils</label>
-            <input type="number" id="newSigils" min="0" placeholder="0" />
-          </div>
+        <h3>➕ Přidat nového hráče</h3>
+        <div class="form-grid-5 mt-10">
+          <input type="text" id="newNick" placeholder="Minecraft nick..." />
+          <select id="newRank" aria-label="Rank nového hráče">
+            <option value="Member">Member</option>
+            <option value="Elder">Elder</option>
+            <option value="Co-leader">Co-leader</option>
+            <option value="Leader">Leader</option>
+          </select>
+          <input type="number" id="newPrestige" min="0" max="100" placeholder="Prestige (0–100)" />
+          <input type="number" id="newWeeklyGoal" min="0" placeholder="Týdenní cíl" />
+          <input type="number" id="newDeaths" min="0" placeholder="Smrti" />
+          <input type="number" id="newSigils" min="0" placeholder="Sigils" />
         </div>
         <div class="actions-row">
-          <button type="button" class="btn btn-green" id="addPlayerBtn">+ Přidat člena</button>
+          <button type="button" class="btn btn-green" id="addPlayerBtn">+ Přidat hráče</button>
         </div>
-      </div>
 
-      <div class="card mt-16">
-        <h3>👥 Příspěvky a statistiky členů</h3>
-        <div id="adminPlayersList" class="stack-list"></div>
+        <div class="cards-stack mt-16" id="adminPlayersList"></div>
       </div>
     </section>
-  </div>
+  </main>
 
   <!-- PŘIHLAŠOVACÍ MODÁL -->
-  <div id="authModal" class="modal-backdrop">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+  <div class="modal-backdrop" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+    <div class="modal-card">
       <div class="modal-head">
-        <h3 id="authModalTitle">🔐 Přihlášení do LAP The Pit</h3>
-        <button type="button" class="btn btn-dark btn-sm" id="closeAuthModalBtn">✕</button>
+        <h2 id="authModalTitle">🔐 Přihlášení do LAP The Pit</h2>
+        <button type="button" class="btn btn-dark btn-sm" id="closeAuthModalBtn" aria-label="Zavřít">✕</button>
       </div>
+
       <form id="authForm">
-        <div class="field mb-12">
+        <div class="auth-field">
           <label for="authUsername">Login jméno</label>
-          <input type="text" id="authUsername" autocomplete="username" required />
+          <input type="text" id="authUsername" autocomplete="username" placeholder="např. bowman nebo brumik" required />
         </div>
-        <div class="field mb-12">
+
+        <div class="auth-field">
           <label for="authPassword">Heslo</label>
-          <div class="password-wrap">
-            <input type="password" id="authPassword" autocomplete="current-password" required />
-            <button type="button" class="btn btn-dark btn-sm" id="togglePasswordBtn">👁️</button>
+          <div class="password-row">
+            <input type="password" id="authPassword" autocomplete="current-password" placeholder="Zadej heslo" required />
+            <button type="button" class="btn btn-dark btn-sm" id="togglePasswordBtn" aria-label="Zobrazit nebo skrýt heslo">👁️</button>
           </div>
         </div>
-        <div id="authFeedback" class="auth-feedback"></div>
-        <div class="actions-row">
+
+        <label class="autologin-checkbox-row" for="authAutologinCheckbox">
+          <input type="checkbox" id="authAutologinCheckbox" checked />
+          <span><strong>Autologin</strong> – zapamatovat přihlášení i po zavření prohlížeče</span>
+        </label>
+
+        <div class="auth-feedback" id="authFeedback"></div>
+
+        <div class="modal-actions">
           <button type="submit" class="btn btn-green">Přihlásit se</button>
           <button type="button" class="btn btn-dark" id="cancelAuthBtn">Zrušit</button>
         </div>
@@ -546,24 +440,24 @@
     </div>
   </div>
 
-  <!-- DETAIL HRÁČE MODÁL -->
-  <div id="playerModal" class="modal-backdrop">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="playerModalNick">
+  <!-- MODÁL DETAILU HRÁČE -->
+  <div class="modal-backdrop" id="playerModal" role="dialog" aria-modal="true" aria-labelledby="playerModalNick">
+    <div class="modal-card modal-card-wide">
       <div class="modal-head">
-        <div class="player-modal-identity">
-          <img id="playerModalAvatar" class="skin-head" src="https://mc-heads.net/avatar/MHF_Steve/48" alt="Avatar hráče" />
+        <div class="player-modal-header">
+          <img class="skin-head" id="playerModalAvatar" src="" alt="Avatar hráče" width="48" height="48" />
           <div>
-            <h3 id="playerModalNick">Hráč</h3>
-            <div class="player-sub mt-2" id="playerModalMeta">Rank • Prestige</div>
+            <h2 id="playerModalNick">Hráč</h2>
+            <div class="player-sub" id="playerModalMeta">Rank • Prestige</div>
           </div>
         </div>
-        <button type="button" class="btn btn-dark btn-sm" id="closePlayerModalBtn">✕</button>
+        <button type="button" class="btn btn-dark btn-sm" id="closePlayerModalBtn" aria-label="Zavřít">✕</button>
       </div>
       <div id="playerModalBody"></div>
     </div>
   </div>
 
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="script.js"></script>
 </body>
