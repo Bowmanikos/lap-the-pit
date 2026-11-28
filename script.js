@@ -240,22 +240,40 @@ function safeReadSession() {
   }
 }
 
-function safeReadSavedPants() {
-  try {
-    const arr = JSON.parse(localStorage.getItem("lap_pit_saved_pants_v1"));
-    return Array.isArray(arr) ? arr : [];
-  } catch {
-    return [];
-  }
+function getCurrentUserStorageKey() {
+  const raw =
+    authState.currentUser?.username ||
+    authState.currentUser?.mcNick ||
+    "guest";
+  return String(raw).trim().toLowerCase() || "guest";
 }
 
-function safeReadSavedSwords() {
+function loadUserItemsCollection(storagePrefix) {
+  const key = `${storagePrefix}_by_user_v1`;
   try {
-    const arr = JSON.parse(localStorage.getItem("lap_pit_saved_swords_v1"));
-    return Array.isArray(arr) ? arr : [];
+    const parsed = JSON.parse(localStorage.getItem(key));
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed;
+    }
   } catch {
-    return [];
+    // Ignoruj chybu čtení
   }
+  return {};
+}
+
+function getUserSavedItems(storagePrefix) {
+  const map = loadUserItemsCollection(storagePrefix);
+  const userKey = getCurrentUserStorageKey();
+  const list = map[userKey];
+  return Array.isArray(list) ? list : [];
+}
+
+function setUserSavedItems(storagePrefix, items) {
+  const key = `${storagePrefix}_by_user_v1`;
+  const map = loadUserItemsCollection(storagePrefix);
+  const userKey = getCurrentUserStorageKey();
+  map[userKey] = Array.isArray(items) ? items : [];
+  localStorage.setItem(key, JSON.stringify(map));
 }
 
 const authState = { currentUser: safeReadSession() };
@@ -263,14 +281,12 @@ const authState = { currentUser: safeReadSession() };
 const pantsState = {
   cratesOpened: 0,
   pantsDroppedCount: 0,
-  currentPants: null,
-  savedPants: safeReadSavedPants()
+  currentPants: null
 };
 
 const swordsState = {
   swordsStartedCount: 0,
-  currentSword: null,
-  savedSwords: safeReadSavedSwords()
+  currentSword: null
 };
 
 let data = loadData();
@@ -531,14 +547,6 @@ async function initRealtimeSync() {
   }, 5000);
 }
 
-function saveSavedPants() {
-  localStorage.setItem("lap_pit_saved_pants_v1", JSON.stringify(pantsState.savedPants));
-}
-
-function saveSavedSwords() {
-  localStorage.setItem("lap_pit_saved_swords_v1", JSON.stringify(swordsState.savedSwords));
-}
-
 function saveSession() {
   if (authState.currentUser) {
     sessionStorage.setItem("lap_pit_session", JSON.stringify(authState.currentUser));
@@ -614,8 +622,20 @@ function applyPantsAuthGuard() {
 }
 
 function applySwordsAuthGuard() {
+  const gate = document.getElementById("swordsAuthGate");
+  const content = document.getElementById("swordsAuthenticatedContent");
   const adminSwordCard = document.getElementById("adminSwordEnchantCreatorCard");
+
   setHidden(adminSwordCard, !isAdmin());
+  if (!gate || !content) return;
+
+  if (isLoggedIn()) {
+    setHidden(gate, true);
+    setHidden(content, false);
+  } else {
+    setHidden(gate, false);
+    setHidden(content, true);
+  }
 }
 
 function applyPermissions() {
@@ -707,6 +727,8 @@ function submitAuthForm(e) {
 
 function logoutUser() {
   authState.currentUser = null;
+  pantsState.currentPants = null;
+  swordsState.currentSword = null;
   saveSession();
   renderAll();
   if (activePlayerModalId !== null) openPlayerDetailModal(activePlayerModalId, true);
@@ -720,14 +742,15 @@ function switchTab(tab) {
     return;
   }
 
-  if (tab === "pants" && !isLoggedIn()) {
+  if ((tab === "pants" || tab === "swords") && !isLoggedIn()) {
     applyPantsAuthGuard();
+    applySwordsAuthGuard();
     document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
     document.querySelectorAll(".nav-tab").forEach(el => el.classList.remove("active"));
-    document.getElementById("tab-pants")?.classList.add("active");
-    document.querySelector('.nav-tab[data-tab="pants"]')?.classList.add("active");
+    document.getElementById(`tab-${tab}`)?.classList.add("active");
+    document.querySelector(`.nav-tab[data-tab="${tab}"]`)?.classList.add("active");
     openAuthModal();
-    showToast("Pro vstup do sekce Pants se musíš přihlásit.");
+    showToast(`Pro vstup do sekce ${tab === "pants" ? "Pants" : "Swords"} se musíš přihlásit.`);
     return;
   }
 
@@ -895,12 +918,13 @@ function enchantCurrentPantsStep() {
   p.enchants.push(rolled);
 
   if (p.tier === 3) {
-    pantsState.savedPants.unshift({
+    const mySaved = getUserSavedItems("lap_pit_saved_pants");
+    mySaved.unshift({
       ...cloneData(p),
       owner: getCurrentActorNick(),
       createdAt: formatNowCzech()
     });
-    saveSavedPants();
+    setUserSavedItems("lap_pit_saved_pants", mySaved);
     showToast(`✨ Dokončeny Tier 3 ${getColorObj(p.colorId).name}!`);
   } else {
     showToast(`✨ Enchantnuto na Tier ${p.tier} (${rolled.name} ${ROMAN_TIERS[rolled.level]})`);
@@ -945,20 +969,28 @@ function resetEnchantsToDefault() {
 }
 
 function deleteSavedPantsItem(pantsId) {
-  pantsState.savedPants = pantsState.savedPants.filter(item => item.id !== pantsId);
-  saveSavedPants();
+  if (!isLoggedIn()) {
+    openAuthModal();
+    return;
+  }
+  const updated = getUserSavedItems("lap_pit_saved_pants").filter(item => item.id !== pantsId);
+  setUserSavedItems("lap_pit_saved_pants", updated);
   showToast("Kalhoty ze sbírky smazány.");
   renderPantsTab();
 }
 
 function clearSavedPants() {
-  if (pantsState.savedPants.length === 0) {
-    showToast("Sbírka kalhot už je prázdná.");
+  if (!isLoggedIn()) {
+    openAuthModal();
     return;
   }
-  pantsState.savedPants = [];
-  saveSavedPants();
-  showToast("Sbírka Tier 3 pantů vymazána.");
+  const current = getUserSavedItems("lap_pit_saved_pants");
+  if (current.length === 0) {
+    showToast("Tvoje sbírka kalhot už je prázdná.");
+    return;
+  }
+  setUserSavedItems("lap_pit_saved_pants", []);
+  showToast("Tvoje sbírka Tier 3 pantů byla vymazána.");
   renderPantsTab();
 }
 
@@ -966,12 +998,14 @@ function renderPantsTab() {
   applyPantsAuthGuard();
   if (!isLoggedIn()) return;
 
+  const mySavedPants = getUserSavedItems("lap_pit_saved_pants");
+
   const statsRow = document.getElementById("pantsStatsRow");
   if (statsRow) {
     statsRow.innerHTML = `
       <span>Otevřené bedny: <strong>${pantsState.cratesOpened}</strong></span>
       <span>Padlé panty: <strong>${pantsState.pantsDroppedCount}</strong></span>
-      <span>Dokončené T3: <strong>${pantsState.savedPants.length}</strong></span>
+      <span>Moje T3: <strong>${mySavedPants.length}</strong></span>
     `;
   }
 
@@ -1030,10 +1064,10 @@ function renderPantsTab() {
 
   const savedGrid = document.getElementById("savedPantsGrid");
   if (savedGrid) {
-    if (pantsState.savedPants.length === 0) {
+    if (mySavedPants.length === 0) {
       savedGrid.innerHTML = `<p class="muted-text">Zatím nemáš dokončené žádné Tier 3 panty.</p>`;
     } else {
-      savedGrid.innerHTML = pantsState.savedPants.map(item => {
+      savedGrid.innerHTML = mySavedPants.map(item => {
         const col = getColorObj(item.colorId);
         return `
           <div class="pants-item-card ${col.cardClass}">
@@ -1043,8 +1077,8 @@ function renderPantsTab() {
                 <strong>${escapeHtml(col.name)} • Tier 3</strong>
               </div>
               <div class="admin-inputs mt-0">
-                <span class="obj-badge reward">${escapeHtml(item.owner || "Hráč")}</span>
-                <button type="button" class="btn btn-red btn-sm" data-del-saved-pants="${escapeHtml(item.id)}" title="Smazat kalhoty">✕</button>
+                <span class="obj-badge reward">${escapeHtml(item.owner || getCurrentActorNick())}</span>
+                <button type="button" class="btn btn-red btn-sm" data-del-saved-pants="${escapeHtml(item.id)}" title="Smazat tyto kalhoty">✕</button>
               </div>
             </div>
             <div class="player-sub mt-0 mb-8">${escapeHtml(item.createdAt || "")}</div>
@@ -1065,6 +1099,11 @@ function renderPantsTab() {
 
 /* SWORDS */
 function startEnchantSword() {
+  if (!isLoggedIn()) {
+    openAuthModal();
+    return;
+  }
+
   swordsState.swordsStartedCount += 1;
   swordsState.currentSword = {
     id: `sword_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -1084,6 +1123,11 @@ function startEnchantSword() {
 }
 
 function resetCurrentSword() {
+  if (!isLoggedIn()) {
+    openAuthModal();
+    return;
+  }
+
   swordsState.currentSword = null;
   const statusEl = document.getElementById("swordStatusBox");
   if (statusEl) {
@@ -1094,6 +1138,11 @@ function resetCurrentSword() {
 }
 
 function enchantCurrentSwordStep() {
+  if (!isLoggedIn()) {
+    openAuthModal();
+    return;
+  }
+
   const s = swordsState.currentSword;
   if (!s || s.tier >= 3) return;
 
@@ -1107,12 +1156,13 @@ function enchantCurrentSwordStep() {
   s.enchants.push(rolled);
 
   if (s.tier === 3) {
-    swordsState.savedSwords.unshift({
+    const mySaved = getUserSavedItems("lap_pit_saved_swords");
+    mySaved.unshift({
       ...cloneData(s),
       owner: getCurrentActorNick(),
       createdAt: formatNowCzech()
     });
-    saveSavedSwords();
+    setUserSavedItems("lap_pit_saved_swords", mySaved);
     showToast("⚔️ Dokončen Tier 3 Mystic Sword!");
   } else {
     showToast(`✨ Meč enchantnut na Tier ${s.tier} (${rolled.name} ${ROMAN_TIERS[rolled.level]})`);
@@ -1157,31 +1207,42 @@ function resetSwordEnchantsToDefault() {
 }
 
 function deleteSavedSwordItem(swordId) {
-  swordsState.savedSwords = swordsState.savedSwords.filter(item => item.id !== swordId);
-  saveSavedSwords();
+  if (!isLoggedIn()) {
+    openAuthModal();
+    return;
+  }
+  const updated = getUserSavedItems("lap_pit_saved_swords").filter(item => item.id !== swordId);
+  setUserSavedItems("lap_pit_saved_swords", updated);
   showToast("Meč ze sbírky smazán.");
   renderSwordsTab();
 }
 
 function clearSavedSwords() {
-  if (swordsState.savedSwords.length === 0) {
-    showToast("Sbírka mečů už je prázdná.");
+  if (!isLoggedIn()) {
+    openAuthModal();
     return;
   }
-  swordsState.savedSwords = [];
-  saveSavedSwords();
-  showToast("Sbírka Tier 3 mečů vymazána.");
+  const current = getUserSavedItems("lap_pit_saved_swords");
+  if (current.length === 0) {
+    showToast("Tvoje sbírka mečů už je prázdná.");
+    return;
+  }
+  setUserSavedItems("lap_pit_saved_swords", []);
+  showToast("Tvoje sbírka Tier 3 mečů byla vymazána.");
   renderSwordsTab();
 }
 
 function renderSwordsTab() {
   applySwordsAuthGuard();
+  if (!isLoggedIn()) return;
+
+  const mySavedSwords = getUserSavedItems("lap_pit_saved_swords");
 
   const statsRow = document.getElementById("swordsStatsRow");
   if (statsRow) {
     statsRow.innerHTML = `
       <span>Vytvořené meče: <strong>${swordsState.swordsStartedCount}</strong></span>
-      <span>Dokončené T3: <strong>${swordsState.savedSwords.length}</strong></span>
+      <span>Moje T3: <strong>${mySavedSwords.length}</strong></span>
     `;
   }
 
@@ -1238,18 +1299,18 @@ function renderSwordsTab() {
 
   const savedGrid = document.getElementById("savedSwordsGrid");
   if (savedGrid) {
-    if (swordsState.savedSwords.length === 0) {
+    if (mySavedSwords.length === 0) {
       savedGrid.innerHTML = `<p class="muted-text">Zatím nemáš dokončené žádné Tier 3 meče.</p>`;
     } else {
-      savedGrid.innerHTML = swordsState.savedSwords.map(item => `
+      savedGrid.innerHTML = mySavedSwords.map(item => `
         <div class="pants-item-card sword-card">
           <div class="card-header-row mb-6">
             <div>
               <strong>⚔️ Mystic Sword • Tier 3</strong>
             </div>
             <div class="admin-inputs mt-0">
-              <span class="obj-badge reward">${escapeHtml(item.owner || "Hráč")}</span>
-              <button type="button" class="btn btn-red btn-sm" data-del-saved-sword="${escapeHtml(item.id)}" title="Smazat meč">✕</button>
+              <span class="obj-badge reward">${escapeHtml(item.owner || getCurrentActorNick())}</span>
+              <button type="button" class="btn btn-red btn-sm" data-del-saved-sword="${escapeHtml(item.id)}" title="Smazat tento meč">✕</button>
             </div>
           </div>
           <div class="player-sub mt-0 mb-8">${escapeHtml(item.createdAt || "")}</div>
